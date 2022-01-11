@@ -1,0 +1,5 @@
+Connection class
+================
+
+.. autoclass:: querier.Connection
+   :members:
