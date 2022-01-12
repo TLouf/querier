@@ -5,7 +5,7 @@ from pprint import pformat
 from .exceptions import InvalidFilter
 
 
-class Filter:
+class Filter(dict):
     """Filter objects are used to compose search criteria for extracting data from a database.
 
     They are used in :py:class:`querier.Connection` methods to filter
@@ -53,17 +53,24 @@ class Filter:
 
     """
 
-    def __init__(self):
-        self._query = {}
-
     def __str__(self):
-        return pformat(self._query)
+        # super().copy() to avoid RecursionError
+        return pformat(super().copy())
 
     def __repr__(self):
-        return self.__str__()
+        return str(self)
+
+    def __or__(self, other):
+        return self.or_filter(other)
+
+    def __and__(self, other):
+        return self.and_filter(other)
+        
+    def copy(self):
+        return Filter(super().copy())
 
     def get_query(self):
-        return self._query
+        return self
 
     def exists(self, field_id):
         """Add a condition to the filter that matches when the field exists.
@@ -73,7 +80,6 @@ class Filter:
         self._add_operation(field_id, "$exists", True)
         return self
 
-
     def not_exists(self, field_id):
         """Add a condition to the filter that matches when the field doesn't exists.
 
@@ -81,7 +87,6 @@ class Filter:
         """
         self._add_operation(field_id, "$exists", False)
         return self
-
 
     def equals(self, field_id, value):
         """Add a condition to the filter that matches when the field is equals to a value.
@@ -161,7 +166,7 @@ class Filter:
 
     def is_empty(self):
         """Return True if the filter is empty (has no conditions), False otherwise."""
-        return len(self._query.keys()) == 0
+        return len(self) == 0
 
     def or_filter(self, other):
         """Perform an OR operation with a second filter.
@@ -176,35 +181,68 @@ class Filter:
             f2 = querier.Filter()
             f2.greater_or_equals('favorite_count', 500)
 
-            f1.or_condition(f2)
+            f1.or_filter(f2)
 
         f1 is a filter that matches tweets with a number of retweets 
         larger than 1000 OR a number of favorites larger than 500
 
-        :param other: a filter object
-        :type other: :py:class:`querier.Filter`
+        :param other: a filter object or dict
+        :type other: :py:class:`querier.Filter` or :py:class:`dict`
         :raises InvalidFilter: if one of the filters is empty or both filters are the same object
         :return: self
         :rtype: :py:class:`querier.Filter`
         """
-        if other.is_empty() or self.is_empty():
+        return self._logical_op("$or", other)
+
+    def and_filter(self, other):
+        """Perform an AND operation with a second filter.
+
+        Example::
+
+            import querier
+
+            f1 = querier.Filter()
+            f1.greater_or_equals('retweet_count', 500)
+
+            f2 = querier.Filter()
+            f2.less_or_equals('retweet_count', 1000)
+
+            f1.and_filter(f2)
+
+        f1 is a filter that matches tweets with a number of retweets 
+        between 500 and 1000.
+
+        :param other: a filter object or dict
+        :type other: :py:class:`querier.Filter` or :py:class:`dict`
+        :raises InvalidFilter: if one of the filters is empty or both filters are the same object
+        :return: self
+        :rtype: :py:class:`querier.Filter`
+        """
+        return self._logical_op("$and", other)
+
+    def _logical_op(self, op, other):
+        if self.is_empty() or len(other) == 0:
             raise InvalidFilter("One of the filters is empty")
 
         if other == self:
             raise InvalidFilter("The argument cannot be the caller filter")
 
-        cond1 = self._query
-        cond2 = other._query
-        self._query = {"$or": [cond1, cond2]}
+        if list(self.keys()) == [op]:
+            # to chain operations
+            self[op].append(other)
+        else:
+            conditions = [self.copy(), other]
+            self.clear()
+            self[op] = conditions
         return self
 
     def _add_operation(self, field_id, operation, value):
-        if type(field_id) is not str:
+        if not isinstance(field_id, str):
             raise InvalidFilter("field_id argument must be a string")
 
-        if field_id not in self._query:
-            self._query[field_id] = {}
-        target = self._query[field_id]
+        if field_id not in self:
+            self[field_id] = {}
+        target = self[field_id]
         
         target[operation] = value
         return self
