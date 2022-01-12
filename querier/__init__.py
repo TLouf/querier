@@ -1,21 +1,29 @@
-from .private_querier import \
-    Filter, Result, Connection,\
-    InvalidFilter, CredentialsError, AuthentificationError, ServerError,\
-    UNAUTHORIZED_COMMAND, AUTHENTIFICATION_FAILED
+import logging
+import logging.handlers
+
+from .filter import Filter
+from .result import Result
+from .connection import Connection
 
 
 __all__ = [
     "Connection", 
     "Result",
     "Filter", 
-    
-    "InvalidFilter",
-    "CredentialsError",
-    "AuthentificationError",
-    "ServerError",
-
-    "UNAUTHORIZED_COMMAND",
-    "AUTHENTIFICATION_FAILED"
 ]
 __version__ = "0.0.5"
-private_querier.init_logger("querier", "querier.log")
+
+def init_logger(name, filename, level=logging.DEBUG):
+    logger = logging.getLogger(name)
+    logger.setLevel(level)
+
+    file_formatter = logging.Formatter('[%(levelname)s] <%(asctime)s>: %(message)s')
+
+    max_size = 256 * 1024
+    fh = logging.handlers.RotatingFileHandler(filename, maxBytes=max_size)
+    fh.setFormatter(file_formatter)
+
+    logger.addHandler(fh)
+    return logger
+
+init_logger("querier", "querier.log")
