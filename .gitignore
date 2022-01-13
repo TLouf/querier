@@ -87,7 +87,4 @@ target/
 # Bash scripts
 *.sh
 
-documentation/**
-!documentation/_sources/
-!documentation/_sources/**
 notebooks/

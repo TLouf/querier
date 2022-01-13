@@ -3,7 +3,7 @@ import logging.handlers
 
 from .filter import Filter
 from .result import Result
-from .connection import Connection
+from .connection import Connection, NamedAgg
 from .exceptions import (
     InvalidFilter,
     CredentialsError,
@@ -16,6 +16,7 @@ __all__ = [
     "Connection", 
     "Result",
     "Filter",
+    "NamedAgg",
     "InvalidFilter",
     "CredentialsError",
     "AuthentificationError",

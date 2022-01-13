@@ -16,7 +16,7 @@ following command::
 
 To test that the library is installed, execute the following python script::
 
-    >>> import querier
+    import querier
 
 
 
@@ -91,7 +91,7 @@ To start a new connection there are two ways:
         with querier.Connection('twitter_2020') as con:
             # Use con
 
-    * It can be instantiated and then closed manually using :py:meth:`Connection.close()`::
+    * It can be instantiated and then closed manually using :py:meth:`querier.Connection.close()`::
 
         import querier
         con = querier.Connection('twitter_2020')
@@ -166,21 +166,21 @@ to retrieve entries with special conditions.
 
 The most simple filter is the empty filter::
 
-    >>> from querier import Filter
-    >>> f = Filter()
+    from querier import Filter
+    f = Filter()
 
-It will make :py:meth:`Connection.extract` method to return all entries in the database as no condition is defined in the filter.
+It will make :py:meth:`querier.Connection.extract` method to return all entries in the database as no condition is defined in the filter.
 
 Filter methods can be used (see :py:class:`querier.Filter`) to add simple
 conditions that test a particular field from the database.
 
 Example of a filter::
 
-    >>> from querier import Filter
-    >>> f = Filter()
-    >>> f.greater_than('retweet_count', 500)
-    >>> f.less_than('retweet_count', 1000)
-    >>> f.any_of('place.country_code', ['ES', 'FR'])
+    from querier import Filter
+    f = Filter()
+    f.greater_than('retweet_count', 500)
+    f.less_than('retweet_count', 1000)
+    f.any_of('place.country_code', ['ES', 'FR'])
 
 This filter will only allow tweets (entries) from Spain or France with a number 
 of retweets between 500 and 1000.

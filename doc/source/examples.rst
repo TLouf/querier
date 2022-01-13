@@ -17,7 +17,7 @@ The following snippets exemplify how to perform several extractions with querier
 
 This example shows how to take a sample from the twitter database and print it in a human 
 readable way. Due to the nature of MongoDB databases entries
-can have missing fields (use :py:meth:`Filter.exists` to filter entries where a field is not missing). 
+can have missing fields (use :py:meth:`querier.Filter.exists` to filter entries where a field is not missing). 
 
 It can be useful to sample a database first to know the entries fields.
 

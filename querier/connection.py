@@ -187,7 +187,7 @@ class Connection:
 
         :param filter: filter that will be used to test the entries
         :type filter: :py:class:`querier.Filter`
-        :param collections_subset: list of collections to extract from. A subset of :py:meth:`Connection.list_list_available_collections()`
+        :param collections_subset: list of collections to extract from. A subset of :py:meth:`Connection.list_available_collections()`
         :type collections_subset: list
         :return: entry from the database or None if no entry matches the filter
         :rtype: dict
@@ -255,7 +255,7 @@ class Connection:
         :param fields: List of selected fields from the original database that the result dictionaries 
                        will have. This is useful when only a subset of the fields is needed.
         :type fields: list
-        :param collections_subset: list of collections to extract from. A subset of :py:meth:`Connection.list_list_available_collections()`
+        :param collections_subset: list of collections to extract from. A subset of :py:meth:`Connection.list_available_collections()`
         :type collections_subset: list
         :return: entry from the database or None if no entry matches the filter
         :rtype: :py:class:`querier.Result`
@@ -311,7 +311,7 @@ class Connection:
 
         :param pipeline: filter to test the entries
         :type pipeline: list
-        :param collections_subset: list of collections to extract from. A subset of :py:meth:`Connection.list_list_available_collections()`
+        :param collections_subset: list of collections to extract from. A subset of :py:meth:`Connection.list_available_collections()`
         :type collections_subset: list
         :param aggregate_kwargs: additional keyword arguments to pass on to :py:meth:`pymongo.collection.Collection.aggregate`
         :return: entry from the database or None if no entry matches the filter
@@ -367,8 +367,8 @@ class Connection:
 
         `aggregations` works on the model of
         `pandas.DataFrameGroupBy.aggregate`, except we provide a
-        `querier.NamedAgg` with keywords `field` and `aggfunc`. For reference
-        see
+        :py:meth:`querier.NamedAgg` with keywords `field` and `aggfunc`.
+        For reference see
         https://pandas.pydata.org/pandas-docs/stable/user_guide/groupby.html?highlight=filter#named-aggregation
         '''
         if aggregate_kwargs is None:
@@ -405,10 +405,11 @@ class Connection:
             pipeline, collections_subset=collections_subset, **aggregate_kwargs
         )
 
-    def distinct(self, field_name: str) -> Result:
+    def distinct(self, field_name: str) -> set:
         """Return a set with all the possible values that the field can take in the database.
 
         Example:
+
         >>> import querier
         >>> with querier.Connection('twitter_2020') as con:
         >>>     con.distinct('place.country')
