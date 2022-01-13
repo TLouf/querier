@@ -1,10 +1,12 @@
 """Module docstring."""
+from __future__ import annotations
 
 import configparser
 import logging
 from os.path import expanduser
 from os import getpid
 from functools import wraps
+from typing import Hashable, NamedTuple, TYPE_CHECKING
 
 import pymongo
 
@@ -16,9 +18,18 @@ from .exceptions import (
 )
 from .result import Result
 
+if TYPE_CHECKING:
+    from .filter import Filter
+
 module_logger = logging.getLogger("querier")
 AUTHENTIFICATION_FAILED = 18
 UNAUTHORIZED_COMMAND = 13
+
+
+class NamedAgg(NamedTuple):
+    field: Hashable
+    aggfunc: str
+
 
 def _pymongo_call(f):
     @wraps(f)
@@ -271,7 +282,116 @@ class Connection:
         return r
 
 
-    def distinct(self, field_name: str):
+    def aggregate(
+        self,
+        pipeline: list,
+        collections_subset: list | None = None,
+        **aggregate_kwargs,
+    ) -> Result: 
+        """Extract entries from the database resulting from a processing pipeline.
+
+        To limit the number of entries that will be returned, use :py:meth:`Result.limit()`. As 
+        databases can contain a huge number of entries, it is advised to test the code 
+        with a limited result first.
+
+        To iterate through the entries, see :py:class:`querier.Result`
+
+        :param pipeline: filter to test the entries
+        :type pipeline: list
+        :param collections_subset: list of collections to extract from. A subset of :py:meth:`Connection.list_list_available_collections()`
+        :type collections_subset: list
+        :param aggregate_kwargs: additional keyword arguments to pass on to :py:meth:`pymongo.collection.Collection.aggregate`
+        :return: entry from the database or None if no entry matches the filter
+        :rtype: :py:class:`querier.Result`
+        """
+        cursors = []
+        colls = self._db.list_collection_names()
+
+        module_logger.debug("######### Begin extraction #########")
+        
+        module_logger.debug("dbname '{}' | process pid {}".format(self._dbname, getpid()))
+
+        collections = collections_subset
+        if collections is None:
+            collections = self._db.list_collection_names()
+
+        @_pymongo_call
+        def internal_aggregate(self, coll, pipeline, **kwargs):
+            return self._db[coll].aggregate(pipeline, **kwargs)
+
+        r = Result()
+        for coll in collections:
+            module_logger.debug("    -> Extract in {}".format(coll))
+
+            result = internal_aggregate(self, coll, pipeline, **aggregate_kwargs)
+
+            if result is not None:
+                cursors.append(result)
+                colls.append(coll)
+            
+
+        # Adds all obtained cursors to the Result object
+        r._add_cursors(cursors, colls)
+        self._result_pool.append(r)
+        return r
+
+    def groupby(
+        self,
+        field_name: str,
+        pre_filter: Filter | None = None,
+        post_filter: Filter | None = None,
+        collections_subset: list | None = None,
+        aggregate_kwargs: dict | None = None,
+        **aggregations,
+    ) -> Result:
+        '''Group by a given field and return aggregate results.
+
+        In the collections given by `collections_subset` (the default `None`
+        meaning all available collections), after filtering according to a
+        `pre_filter`, group by the field `field_name`, perform the aggregations
+        given by `aggregations`, filter  according to a `post_filter` and return
+        the result.
+
+        `aggregations` works on the model of
+        `pandas.DataFrameGroupBy.aggregate`, except we provide a
+        `querier.NamedAgg` with keywords `field` and `aggfunc`. For reference
+        see
+        https://pandas.pydata.org/pandas-docs/stable/user_guide/groupby.html?highlight=filter#named-aggregation
+        '''
+        if aggregate_kwargs is None:
+            aggregate_kwargs = {}
+
+        pipeline = []
+        if pre_filter is not None:
+            pipeline.append({"$match": pre_filter})
+
+        group_stage = {'_id': field_name}
+        for output_field, agg_descr in aggregations.items():
+            if not hasattr(agg_descr, 'aggfunc'):
+                agg_descr = NamedAgg(*agg_descr)
+            aggfunc = agg_descr.aggfunc
+            if not aggfunc.startswith('$'):
+                aggfunc = '$' + aggfunc
+
+            if aggfunc == '$count':
+                aggfunc = '$sum'
+                input_field = 1
+            else:
+                input_field = agg_descr.field
+                if not input_field.startswith('$'):
+                    input_field = '$' + input_field
+
+            group_stage[output_field] = {aggfunc: input_field}
+        
+        pipeline.append({'$group': group_stage})
+
+        if post_filter is not None:
+            pipeline.append({"$match": post_filter})
+
+        return self.aggregate(
+            pipeline, collections_subset=collections_subset, **aggregate_kwargs
+        )
+
         """Return a set with all the possible values that the field can take in the database.
 
         Example:
