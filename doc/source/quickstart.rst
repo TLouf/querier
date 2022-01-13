@@ -7,11 +7,10 @@ Installation
 It is advised to install Querier in a conda environment (other than the base environment).
 To do so, a conda environment with python 3 must be activated
 
-To install the package, change the terminal working directory to the 
-package location (where querier-0.0.5.tar.gz is placed) and execute the 
+To install the package from the source repository, execute the 
 following command::
 
-    pip install querier-0.0.5.tar.gz 
+    pip install git+https://github.com/TLouf/querier.git#egg=querier
 
 
 To test that the library is installed, execute the following python script::
