@@ -378,7 +378,7 @@ class Connection:
         if pre_filter is not None:
             pipeline.append({"$match": pre_filter})
 
-        group_stage = {'_id': field_name}
+        group_stage = {'_id': '$' + field_name}
         for output_field, agg_descr in aggregations.items():
             if not hasattr(agg_descr, 'aggfunc'):
                 agg_descr = NamedAgg(*agg_descr)
