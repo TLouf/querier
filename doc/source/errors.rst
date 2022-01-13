@@ -1,4 +1,4 @@
-Querier errors
+Custom errors
 ==============
 .. autoclass:: querier.CredentialsError
 .. autoclass:: querier.AuthentificationError

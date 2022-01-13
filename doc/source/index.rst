@@ -3,7 +3,7 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Querier 0.0.5 documentation
+Querier documentation
 ==================================
 
 Querier is a simple library to extract data from MongoDB databases. 

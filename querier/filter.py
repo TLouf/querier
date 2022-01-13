@@ -35,26 +35,26 @@ class Filter(dict):
     
        Entries are collections of pairs field_id-value. They are returned as python 
        dictionaries and values can of any type: string, numeric, list, dictionary,...
-       Example of an entry from the twitter database::
+       Excerpt of an example entry from the twitter database:
+
+       .. code-block:: json
 
             {
                 "lang": "es",
                 "place": {
-                    coordinates': [[[-109.479171, -56.557358],
+                    "coordinates": [[[-109.479171, -56.557358],
                                     [-109.479171, -17.497384],
                                     [-66.15203, -17.497384],
                                     [-66.15203, -56.557358]]]
                     "country_code": "ES",
-                    ...
                 },
                 "favorite_count": 124,
-                ...
             }
 
-       To filter by nested fields the dot ('.') notation should be used. For example, the following code:
+       To filter by nested fields the dot ('.') notation should be used. For example, the following code::
 
-            >>> f = Filter()
-            >>> f.any_of('place.country_code', ['ES', 'FR', 'PT']) 
+            f = Filter()
+            f.any_of('place.country_code', ['ES', 'FR', 'PT']) 
 
        will match entries from Spain (ES), France (FR) or Portugal (PT).    
 

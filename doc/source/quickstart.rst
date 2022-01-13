@@ -1,4 +1,4 @@
-Querier Quickstart
+Quickstart
 ==================
 
 Installation
@@ -8,7 +8,9 @@ It is advised to install Querier in a conda environment (other than the base env
 To do so, a conda environment with python 3 must be activated
 
 To install the package from the source repository, execute the 
-following command::
+following command:
+
+.. code:: bash
 
     pip install git+https://github.com/TLouf/querier.git#egg=querier
 
@@ -29,7 +31,9 @@ A credentials file is a config file (`CFG file format <https://en.wikipedia.org/
 access the databases. It contains two types of sections: sources, which defines where the data should be retrieved from and 
 specific databases.
 
-An example of a credentials file is shown below::
+An example of a credentials file is shown below:
+
+.. code-block:: cfg
 
     [mongodb]
     host=mongo0.ifisc.lan,mongo1.ifisc.lan
@@ -44,7 +48,9 @@ An example of a credentials file is shown below::
 In this example, the source is MongoDB server (section [mongodb]) and the specific database is [twitter]. Notice that 
 the [twitter] section is a [mongodb] database (defined by the field 'type').
 
-For example, we could append another specific database for the same source::
+For example, we could append another specific database for the same source:
+
+.. code-block:: cfg
 
     [flightradar]
     type=mongodb
