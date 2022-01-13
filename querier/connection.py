@@ -133,7 +133,11 @@ class Connection:
             pass
 
 
-    def count_entries(self, filter=None, collection=None) -> int:
+    def count_entries(
+        self,
+        filter: Filter | None = None,
+        collection: str | None = None
+    ) -> int:
         """Count the entries that matches a filter.
 
         Example: Count how many tweets from Spain in 2014 have more than 500 favorites
@@ -174,7 +178,11 @@ class Connection:
         return internal_count(self, colls, query)
 
 
-    def extract_one(self, filter=None, collections_subset: list = None) -> dict:
+    def extract_one(
+        self,
+        filter: Filter | None = None,
+        collections_subset: list | None = None,
+    ) -> dict:
         """Extract an entry from the database that matches a filter.
 
         :param filter: filter that will be used to test the entries
@@ -209,7 +217,7 @@ class Connection:
         return result
 
     @_pymongo_call
-    def list_available_collections(self):
+    def list_available_collections(self) -> list:
         """Return a list of available collections.
 
         MongoDB databases can be splitted by collections. For example, all tweets from USA are
@@ -228,7 +236,12 @@ class Connection:
         return names
 
 
-    def extract(self, filter = None, fields: list = None, collections_subset: list = None):
+    def extract(
+        self,
+        filter: Filter | None = None,
+        fields: list | None = None,
+        collections_subset: list | None = None,
+    ) -> Result : 
         """Extract entries from the database that matches a filter.
 
         To limit the number of entries that will be returned, use :py:meth:`Result.limit()`. As 
@@ -392,6 +405,7 @@ class Connection:
             pipeline, collections_subset=collections_subset, **aggregate_kwargs
         )
 
+    def distinct(self, field_name: str) -> Result:
         """Return a set with all the possible values that the field can take in the database.
 
         Example:
