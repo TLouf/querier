@@ -1,8 +1,15 @@
 """Module docstring."""
+from __future__ import annotations
 
+from typing import TYPE_CHECKING
 from pprint import pformat
 
 from .exceptions import InvalidFilter
+
+if TYPE_CHECKING:
+    import re
+    from shapely.geometry import Polygon, MultiPolygon
+    GeoFilterType = Polygon | MultiPolygon | list
 
 
 class Filter(dict):
@@ -163,6 +170,59 @@ class Filter(dict):
         """
         self._add_operation(field_id, "$lte", value)
         return self
+
+    def regex(self, field_id: str, pattern: str | re.Pattern):
+        """Add a condition to the filter that matches when the field matches the
+        regular expression `pattern`.
+
+        **python equivalent:** pattern.match(field_id) is not None
+        """
+        self._add_operation(field_id, "$regex", pattern)
+        return self
+
+    def geo_within(self, field_id: str, geo: GeoFilterType, geo_type: str = 'Polygon'):
+        """Add a condition to the filter that matches when the field's geometry
+        is fully contained within a geometry `geo`.
+        """
+        return self._geo_op('$geoWithin', field_id, geo, geo_type)
+
+    def geo_intersects(self, field_id: str, geo: GeoFilterType, geo_type: str = 'Polygon'):
+        """Add a condition to the filter that matches when the field's geometry
+        intersects with a geometry `geo`.
+        """
+        return self._geo_op('$geoIntersects', field_id, geo, geo_type)
+
+    def _geo_op(self, op: str, field_id: str, geo: GeoFilterType, geo_type: str):
+        if geo_type.endswith('Polygon'):
+            try:
+                import shapely.geometry as shplygeo
+                if not isinstance(geo, (shplygeo.Polygon, shplygeo.MultiPolygon)):
+                    geo = getattr(shplygeo, geo_type)(geo)
+                geo_dict = shplygeo.mapping(geo)
+
+            except ImportError:
+                # Close the polygon if not done
+                if geo[0] != geo[-1]:
+                    geo.append(geo[0])
+                geo_dict = {
+                    'coordinates': [geo],
+                    'type': geo_type
+                }
+
+            value = {'$geometry': geo_dict}
+
+        # If geo type is box or bbox or bounding_box...
+        elif geo_type.lower().endswith('box'):
+            # `geo` assumed in format (min_x, min_y, max_x, max_y), as the
+            # return value of GeoDataFrame.total_bounds. 'box' only for field
+            # containing legacy coordinates, that is not geojson but arrays of
+            # coordinates or stuff like that 
+            value = {'$box': [[geo[0], geo[1]], [geo[2], geo[3]]]}
+
+        else:
+            raise ValueError('geo_type must either be "(Multi)Polygon" or "bbox"')
+
+        self._add_operation(field_id, op, value)
 
     def is_empty(self):
         """Return True if the filter is empty (has no conditions), False otherwise."""
