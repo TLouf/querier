@@ -4,12 +4,23 @@ import logging.handlers
 from .filter import Filter
 from .result import Result
 from .connection import Connection
-
+from .exceptions import (
+    InvalidFilter,
+    CredentialsError,
+    AuthentificationError,
+    ServerError,
+    InternalError,
+)
 
 __all__ = [
     "Connection", 
     "Result",
-    "Filter", 
+    "Filter",
+    "InvalidFilter",
+    "CredentialsError",
+    "AuthentificationError",
+    "ServerError",
+    "InternalError",
 ]
 __version__ = "0.0.5"
 
