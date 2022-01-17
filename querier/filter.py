@@ -1,7 +1,7 @@
 """Module docstring."""
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import Union, TYPE_CHECKING
 from pprint import pformat
 
 from .exceptions import InvalidFilter
@@ -9,7 +9,7 @@ from .exceptions import InvalidFilter
 if TYPE_CHECKING:
     import re
     from shapely.geometry import Polygon, MultiPolygon
-    GeoFilterType = Polygon | MultiPolygon | list
+    GeoFilterType = Union[Polygon, MultiPolygon, list]
 
 
 class Filter(dict):
@@ -72,14 +72,14 @@ class Filter(dict):
 
     def __and__(self, other: Filter | dict) -> Filter:
         return self._logical_op("$and", other)
-        
-    def copy(self):
+
+    def copy(self) -> Filter:
         return Filter(super().copy())
 
-    def get_query(self):
+    def get_query(self) -> Filter:
         return self
 
-    def exists(self, field_id):
+    def exists(self, field_id) -> Filter:
         """Add a condition to the filter that matches when the field exists.
 
         **python equivalent:** field_id is not None
@@ -87,7 +87,7 @@ class Filter(dict):
         self._add_operation(field_id, "$exists", True)
         return self
 
-    def not_exists(self, field_id):
+    def not_exists(self, field_id) -> Filter:
         """Add a condition to the filter that matches when the field doesn't exists.
 
         **python equivalent:** field_id is None
@@ -95,7 +95,7 @@ class Filter(dict):
         self._add_operation(field_id, "$exists", False)
         return self
 
-    def equals(self, field_id, value):
+    def equals(self, field_id, value) -> Filter:
         """Add a condition to the filter that matches when the field is equals to a value.
 
         **python equivalent:** field_id == value
@@ -103,7 +103,7 @@ class Filter(dict):
         self._add_operation(field_id, "$eq", value)
         return self
 
-    def not_equals(self, field_id, value):
+    def not_equals(self, field_id, value) -> Filter:
         """Add a condition to the filter that matches when the field is not equals to a value.
 
         **python equivalent:** field_id != value
@@ -111,7 +111,7 @@ class Filter(dict):
         self._add_operation(field_id, "$ne", value)
         return self
 
-    def any_of(self, field_id, values: list):
+    def any_of(self, field_id, values: list) -> Filter:
         """Add a condition to the filter that matches when the field is 
         equals to any of the values in the list.
 
@@ -123,7 +123,7 @@ class Filter(dict):
         self._add_operation(field_id, "$in", values)
         return self
 
-    def none_of(self, field_id, values: list):
+    def none_of(self, field_id, values: list) -> Filter:
         """Add a condition to the filter that matches when the field is 
         not equals to any of the values in the list.
 
@@ -135,7 +135,7 @@ class Filter(dict):
         self._add_operation(field_id, "$nin", values)
         return self
 
-    def greater_than(self, field_id, value):
+    def greater_than(self, field_id, value) -> Filter:
         """Add a condition to the filter that matches when the field is 
         greater than a value.
 
@@ -144,7 +144,7 @@ class Filter(dict):
         self._add_operation(field_id, "$gt", value)
         return self
 
-    def greater_or_equals(self, field_id, value):
+    def greater_or_equals(self, field_id, value) -> Filter:
         """Add a condition to the filter that matches when the field is
         greater or equals than a value.
 
@@ -153,7 +153,7 @@ class Filter(dict):
         self._add_operation(field_id, "$gte", value)
         return self
 
-    def less_than(self, field_id, value):
+    def less_than(self, field_id, value) -> Filter:
         """Add a condition to the filter that matches when the field is
         less than a value.
 
@@ -162,7 +162,7 @@ class Filter(dict):
         self._add_operation(field_id, "$lt", value)
         return self
 
-    def less_or_equals(self, field_id, value):
+    def less_or_equals(self, field_id, value) -> Filter:
         """Add a condition to the filter that matches when the field is
         less or equals than a value.
 
@@ -171,7 +171,7 @@ class Filter(dict):
         self._add_operation(field_id, "$lte", value)
         return self
 
-    def regex(self, field_id: str, pattern: str | re.Pattern):
+    def regex(self, field_id: str, pattern: str | re.Pattern) -> Filter:
         """Add a condition to the filter that matches when the field matches the
         regular expression `pattern`.
 
@@ -233,11 +233,11 @@ class Filter(dict):
 
         self._add_operation(field_id, op, value, invert=invert)
 
-    def is_empty(self):
+    def is_empty(self) -> bool:
         """Return True if the filter is empty (has no conditions), False otherwise."""
         return len(self) == 0
 
-    def or_filter(self, other):
+    def or_filter(self, other: Filter | dict) -> Filter:
         """Perform an OR operation with a second filter.
 
         Example::
@@ -256,14 +256,13 @@ class Filter(dict):
         larger than 1000 OR a number of favorites larger than 500
 
         :param other: a filter object or dict
-        :type other: :py:class:`querier.Filter` or :py:class:`dict`
         :raises InvalidFilter: if one of the filters is empty or both filters are the same object
         :return: self
         """
         self = self | other
         return self
 
-    def and_filter(self, other):
+    def and_filter(self, other: Filter | dict) -> Filter:
         """Perform an AND operation with a second filter.
 
         Example::
@@ -282,7 +281,6 @@ class Filter(dict):
         between 500 and 1000.
 
         :param other: a filter object or dict
-        :type other: :py:class:`querier.Filter` or :py:class:`dict`
         :raises InvalidFilter: if one of the filters is empty or both filters are the same object
         :return: self
         """
@@ -312,11 +310,11 @@ class Filter(dict):
         if field_id not in self:
             self[field_id] = {}
         target = self[field_id]
-        
+
         if invert:
             if "$not" not in target:
                 target["$not"] = {}
             target["$not"][operation] = value
         else:
-        target[operation] = value
+            target[operation] = value
         return self

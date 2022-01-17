@@ -89,14 +89,12 @@ class Connection:
 
     """
 
-    def __init__(self, dbnamecfg, credentials_path="~/.credentials.cfg"):
+    def __init__(self, dbnamecfg: str, credentials_path: str = "~/.credentials.cfg"):
         """Create and initiate a connection to a database.
 
         :param dbnamecfg: name of the database
-        :type dbnamecfg: str
         :param credentials_path: path to a configuration file with the credentials
         to read the database
-        :type credentials_path: str
         """
         con, db = self._create_connection(dbnamecfg, credentials_path)
         self._con = con
@@ -150,9 +148,7 @@ class Connection:
         3
 
         :param filter: Filter object to count entries or None (all entries)
-        :type filter: :py:class:`querier.Filter`
         :param collection: A collection name from :py:meth:`Connection.list_available_collections()` or None (all collections)
-        :type collection: str
         """
         query = {} if filter is None else filter.get_query()
 
@@ -186,11 +182,8 @@ class Connection:
         """Extract an entry from the database that matches a filter.
 
         :param filter: filter that will be used to test the entries
-        :type filter: :py:class:`querier.Filter`
         :param collections_subset: list of collections to extract from. A subset of :py:meth:`Connection.list_available_collections()`
-        :type collections_subset: list
         :return: entry from the database or None if no entry matches the filter
-        :rtype: dict
         """
         result = None
         
@@ -227,7 +220,6 @@ class Connection:
         Extraction methods can be sped up by using a subset of collections.
 
         :return: a list of all the available collection names
-        :rtype: str
         """
         names = self._db.list_collection_names()
         for n in names:
@@ -251,14 +243,10 @@ class Connection:
         To iterate through the entries, see :py:class:`querier.Result`
 
         :param filter: filter to test the entries
-        :type filter: :py:class:`querier.Filter`
         :param fields: List of selected fields from the original database that the result dictionaries 
                        will have. This is useful when only a subset of the fields is needed.
-        :type fields: list
         :param collections_subset: list of collections to extract from. A subset of :py:meth:`Connection.list_available_collections()`
-        :type collections_subset: list
         :return: entry from the database or None if no entry matches the filter
-        :rtype: :py:class:`querier.Result`
         """
         cursors = []
         colls = self._db.list_collection_names()
@@ -310,12 +298,9 @@ class Connection:
         To iterate through the entries, see :py:class:`querier.Result`
 
         :param pipeline: filter to test the entries
-        :type pipeline: list
         :param collections_subset: list of collections to extract from. A subset of :py:meth:`Connection.list_available_collections()`
-        :type collections_subset: list
         :param aggregate_kwargs: additional keyword arguments to pass on to :py:meth:`pymongo.collection.Collection.aggregate`
         :return: entry from the database or None if no entry matches the filter
-        :rtype: :py:class:`querier.Result`
         """
         cursors = []
         colls = self._db.list_collection_names()
@@ -417,9 +402,7 @@ class Connection:
             
 
         :param field_name: The name of the field to test
-        :type field_name: string
         :return: set of different values
-        :rtype: set
         """
         module_logger.debug("######### Begin distinct('{}') #########".format(field_name))        
         module_logger.debug("dbname '{}' | process pid {}"\
