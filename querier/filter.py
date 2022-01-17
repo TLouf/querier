@@ -67,11 +67,11 @@ class Filter(dict):
     def __repr__(self):
         return str(self)
 
-    def __or__(self, other):
-        return self.or_filter(other)
+    def __or__(self, other: Filter | dict) -> Filter:
+        return self._logical_op("$or", other)
 
-    def __and__(self, other):
-        return self.and_filter(other)
+    def __and__(self, other: Filter | dict) -> Filter:
+        return self._logical_op("$and", other)
         
     def copy(self):
         return Filter(super().copy())
@@ -259,9 +259,9 @@ class Filter(dict):
         :type other: :py:class:`querier.Filter` or :py:class:`dict`
         :raises InvalidFilter: if one of the filters is empty or both filters are the same object
         :return: self
-        :rtype: :py:class:`querier.Filter`
         """
-        return self._logical_op("$or", other)
+        self = self | other
+        return self
 
     def and_filter(self, other):
         """Perform an AND operation with a second filter.
@@ -285,9 +285,9 @@ class Filter(dict):
         :type other: :py:class:`querier.Filter` or :py:class:`dict`
         :raises InvalidFilter: if one of the filters is empty or both filters are the same object
         :return: self
-        :rtype: :py:class:`querier.Filter`
         """
-        return self._logical_op("$and", other)
+        self = self & other
+        return self
 
     def _logical_op(self, op, other):
         if self.is_empty() or len(other) == 0:
@@ -297,13 +297,13 @@ class Filter(dict):
             raise InvalidFilter("The argument cannot be the caller filter")
 
         if list(self.keys()) == [op]:
+            res = self.copy()
             # to chain operations
-            self[op].append(other)
+            res[op].append(other)
         else:
             conditions = [self.copy(), other]
-            self.clear()
-            self[op] = conditions
-        return self
+            res = Filter({op: [conditions]})
+        return res
 
     def _add_operation(self, field_id, operation, value, invert=False):
         if not isinstance(field_id, str):
