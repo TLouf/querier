@@ -4,6 +4,11 @@
 # list see the documentation:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 
+import querier
+import inspect
+import os
+import sys
+
 # -- Path setup --------------------------------------------------------------
 
 # If extensions (or modules to document with autodoc) are in another directory,
@@ -32,7 +37,10 @@ release = '[0.0.5]'
 # ones.
 extensions = [
     'sphinx.ext.autodoc',
+    'sphinx.ext.linkcode',
     'sphinx.ext.intersphinx',
+    'sphinx_autodoc_typehints',
+    'sphinx_copybutton',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -60,3 +68,46 @@ intersphinx_mapping = {
     "pymongo": ("https://pymongo.readthedocs.io/en/stable/", None),
     "python": ("https://docs.python.org/3/", None),
 }
+
+# from pandas
+def linkcode_resolve(domain, info):
+    """
+    Determine the URL corresponding to Python object
+    """
+    if domain != "py":
+        return None
+
+    modname = info["module"]
+    fullname = info["fullname"]
+
+    submod = sys.modules.get(modname)
+    if submod is None:
+        return None
+
+    obj = submod
+    for part in fullname.split("."):
+        try:
+            obj = getattr(obj, part)
+        except AttributeError:
+            return None
+
+    try:
+        fn = inspect.getsourcefile(inspect.unwrap(obj))
+    except TypeError:
+        fn = None
+    if not fn:
+        return None
+
+    try:
+        source, lineno = inspect.getsourcelines(obj)
+    except OSError:
+        lineno = None
+
+    if lineno:
+        linespec = f"#L{lineno}-L{lineno + len(source) - 1}"
+    else:
+        linespec = ""
+
+    fn = os.path.relpath(fn, start=os.path.dirname(querier.__file__))
+
+    return f"https://github.com/TLouf/querier/blob/master/querier/{fn}{linespec}"
