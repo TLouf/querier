@@ -180,19 +180,28 @@ class Filter(dict):
         self._add_operation(field_id, "$regex", pattern)
         return self
 
-    def geo_within(self, field_id: str, geo: GeoFilterType, geo_type: str = 'Polygon'):
+    def geo_within(
+        self, field_id: str, geo: GeoFilterType, geo_type: str = 'Polygon', invert: bool = False
+    ) -> Filter:
         """Add a condition to the filter that matches when the field's geometry
         is fully contained within a geometry `geo`.
         """
-        return self._geo_op('$geoWithin', field_id, geo, geo_type)
+        return self._geo_op('$geoWithin', field_id, geo, geo_type, invert)
 
-    def geo_intersects(self, field_id: str, geo: GeoFilterType, geo_type: str = 'Polygon'):
+    def geo_intersects(
+        self, field_id: str, geo: GeoFilterType, geo_type: str = 'Polygon', invert: bool = False
+    ) -> Filter:
         """Add a condition to the filter that matches when the field's geometry
         intersects with a geometry `geo`.
         """
-        return self._geo_op('$geoIntersects', field_id, geo, geo_type)
+        return self._geo_op('$geoIntersects', field_id, geo, geo_type, invert)
 
-    def _geo_op(self, op: str, field_id: str, geo: GeoFilterType, geo_type: str):
+    def _geo_op(
+        self, op: str, field_id: str, geo: GeoFilterType, geo_type: str, invert: bool
+    ):
+        '''
+        Invert only implemented for `geo_op` because only place it's useful (for now)
+        '''
         if geo_type.endswith('Polygon'):
             try:
                 import shapely.geometry as shplygeo
@@ -222,7 +231,7 @@ class Filter(dict):
         else:
             raise ValueError('geo_type must either be "(Multi)Polygon" or "bbox"')
 
-        self._add_operation(field_id, op, value)
+        self._add_operation(field_id, op, value, invert=invert)
 
     def is_empty(self):
         """Return True if the filter is empty (has no conditions), False otherwise."""
@@ -296,7 +305,7 @@ class Filter(dict):
             self[op] = conditions
         return self
 
-    def _add_operation(self, field_id, operation, value):
+    def _add_operation(self, field_id, operation, value, invert=False):
         if not isinstance(field_id, str):
             raise InvalidFilter("field_id argument must be a string")
 
@@ -304,5 +313,10 @@ class Filter(dict):
             self[field_id] = {}
         target = self[field_id]
         
+        if invert:
+            if "$not" not in target:
+                target["$not"] = {}
+            target["$not"][operation] = value
+        else:
         target[operation] = value
         return self
