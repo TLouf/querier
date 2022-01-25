@@ -340,7 +340,7 @@ class Connection:
         post_filter: Filter | None = None,
         collections_subset: list | None = None,
         **aggregate_kwargs,
-    ) -> Result:
+    ) -> MongoGroupby:
         '''Group by a given field and return aggregate results.
 
         Initialize an aggregation pipeline in the collections given by
