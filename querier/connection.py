@@ -339,22 +339,16 @@ class Connection:
         pre_filter: Filter | None = None,
         post_filter: Filter | None = None,
         collections_subset: list | None = None,
-        aggregate_kwargs: dict | None = None,
-        **aggregations,
+        **aggregate_kwargs,
     ) -> Result:
         '''Group by a given field and return aggregate results.
 
-        In the collections given by `collections_subset` (the default `None`
-        meaning all available collections), after filtering according to a
-        `pre_filter`, group by the field `field_name`, perform the aggregations
-        given by `aggregations`, filter  according to a `post_filter` and return
-        the result.
-
-        `aggregations` works on the model of
-        `pandas.DataFrameGroupBy.aggregate`, except we provide a
-        :py:meth:`querier.NamedAgg` with keywords `field` and `aggfunc`.
-        For reference see
-        https://pandas.pydata.org/pandas-docs/stable/user_guide/groupby.html?highlight=filter#named-aggregation
+        Initialize an aggregation pipeline in the collections given by
+        `collections_subset` (the default `None` meaning all available
+        collections), in which we filter according to a `pre_filter`, group by
+        the field `field_name`, and then filter according to a `post_filter`.
+        The aggregations done in the groupby stage are specified by a subsequent
+        call to :py:meth:`MongoGroupby.agg`.
         '''
         if aggregate_kwargs is None:
             aggregate_kwargs = {}
@@ -363,31 +357,16 @@ class Connection:
         if pre_filter is not None:
             pipeline.append({"$match": pre_filter})
 
-        group_stage = {'_id': '$' + field_name}
-        for output_field, agg_descr in aggregations.items():
-            if not hasattr(agg_descr, 'aggfunc'):
-                agg_descr = NamedAgg(*agg_descr)
-            aggfunc = agg_descr.aggfunc
-            if not aggfunc.startswith('$'):
-                aggfunc = '$' + aggfunc
-
-            if aggfunc == '$count':
-                aggfunc = '$sum'
-                input_field = 1
-            else:
-                input_field = agg_descr.field
-                if not input_field.startswith('$'):
-                    input_field = '$' + input_field
-
-            group_stage[output_field] = {aggfunc: input_field}
-        
+        if not field_name.startswith('$'):
+            field_name = '$' + field_name
+        group_stage = {'_id': field_name}
         pipeline.append({'$group': group_stage})
 
         if post_filter is not None:
             pipeline.append({"$match": post_filter})
 
-        return self.aggregate(
-            pipeline, collections_subset=collections_subset, **aggregate_kwargs
+        return MongoGroupby(
+            self, pipeline, collections_subset=collections_subset, **aggregate_kwargs
         )
 
     def distinct(self, field_name: str) -> set:
@@ -542,3 +521,48 @@ class Connection:
         module_logger.info("    * PID: " + repr(getpid()))
 
         return conection, conection[dbname]
+
+
+class MongoGroupby:
+    def __init__(
+        self,
+        connection: Connection,
+        pipeline: list,
+        collections_subset: list | None = None,
+        **agg_kwargs,
+    ):
+        self.connection = connection
+        self.pipeline = pipeline
+        self.collections_subset = collections_subset
+        self.agg_kwargs = agg_kwargs
+
+    def agg(self, **aggregations) -> Result:
+        '''
+        Works on the model of named aggregations of 
+        :py:meth:`pandas.core.groupby.DataFrameGroupBy.aggregate`, except we
+        provide a :py:meth:`querier.NamedAgg` with keywords `field` and
+        `aggfunc`. For reference see
+        https://pandas.pydata.org/pandas-docs/stable/user_guide/groupby.html?highlight=filter#named-aggregation
+        '''
+        group_stage = [stage for stage in self.pipeline if '$group' in stage][0]
+                       
+        for output_field, agg_descr in aggregations.items():
+            if not hasattr(agg_descr, 'aggfunc'):
+                agg_descr = NamedAgg(*agg_descr)
+            aggfunc = agg_descr.aggfunc
+            if not aggfunc.startswith('$'):
+                aggfunc = '$' + aggfunc
+
+            if aggfunc == '$count':
+                aggfunc = '$sum'
+                input_field = 1
+            else:
+                input_field = agg_descr.field
+                if not input_field.startswith('$'):
+                    input_field = '$' + input_field
+
+            group_stage['$group'][output_field] = {aggfunc: input_field}
+
+        return self.connection.aggregate(
+            self.pipeline, collections_subset=self.collections_subset, **self.agg_kwargs
+        )
