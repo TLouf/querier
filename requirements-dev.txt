@@ -2,6 +2,11 @@ pymongo==3.11.2
 -e ./
 shapely
 ipykernel
+flake8
+mypy
+pytest
+pre-commit
+black
 sphinx
 sphinx-rtd-theme
 sphinx-autodoc-typehints
