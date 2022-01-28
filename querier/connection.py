@@ -4,23 +4,19 @@ from __future__ import annotations
 import configparser
 import logging
 import warnings
-from os.path import expanduser
-from os import getpid
 from functools import wraps
-from typing import Hashable, NamedTuple, TYPE_CHECKING
+from os import getpid
+from os.path import expanduser
+from typing import TYPE_CHECKING, Hashable, NamedTuple
 
 import pymongo
 
-from .exceptions import (
-    CredentialsError,
-    AuthentificationError,
-    ServerError,
-    InternalError,
-)
-from .result import Result
+from querier.exceptions import (AuthentificationError, CredentialsError,
+                                InternalError, ServerError)
+from querier.result import Result
 
 if TYPE_CHECKING:
-    from .filter import Filter
+    from querier.filter import Filter
 
 module_logger = logging.getLogger("querier")
 AUTHENTIFICATION_FAILED = 18
@@ -37,6 +33,7 @@ class NamedAgg(NamedTuple):
             functions work ("sum", "min", "mean"...). For a full reference see
             https://docs.mongodb.com/manual/reference/operator/aggregation/group/#accumulator-operator
     """
+
     field: Hashable
     aggfunc: str
 
@@ -51,13 +48,11 @@ def _pymongo_call(f):
         except pymongo.errors.OperationFailure as e:
             # A collection can deny querying to that user (system.profile)
             if e.code != UNAUTHORIZED_COMMAND:
-                module_logger.error("Unhandled OperationFailure: {}"\
-                    .format(e))
+                module_logger.error("Unhandled OperationFailure: {}".format(e))
                 raise InternalError(e) from None
 
         except pymongo.errors.PyMongoError as e:
-            module_logger.error("Unhandled PyMongoError: {}"\
-                .format(e))
+            module_logger.error("Unhandled PyMongoError: {}".format(e))
             raise InternalError(e) from None
 
         except Exception as ex:
@@ -99,24 +94,19 @@ class Connection:
         self._result_pool = []
         self._test_connection()
 
-
     # Called on enter to 'with' keyword
     def __enter__(self):
         return self
-
 
     # Called on exit from 'with' keyword
     def __exit__(self, exc_type, exc_value, traceback):
         self.close()
 
-
     def __del__(self):
         self.close()
 
-
     def __getitem__(self, coll_names: str | list[str] | slice):
         return CollectionsAccessor(self, coll_names)
-
 
     def close(self):
         """Close the connection."""
@@ -130,14 +120,13 @@ class Connection:
             # If initialization fails self._con does not exists
             pass
 
-
     @_pymongo_call
     def list_available_collections(self) -> list:
         """Return a list of available collections.
 
-        MongoDB databases can be splitted by collections. For example, all tweets from USA are
-        in collection 'northern_america' in twitter databases. Contact the database administrator
-        to know how/if collections are semantically splitted.
+        MongoDB databases can be splitted by collections. For example, all tweets from
+        USA are in collection 'northern_america' in twitter databases. Contact the
+        database administrator to know how/if collections are semantically splitted.
 
         Extraction methods can be sped up by using a subset of collections.
 
@@ -146,10 +135,9 @@ class Connection:
         """
         names = self._db.list_collection_names()
         for n in names:
-            if 'system' in n:
+            if "system" in n:
                 names.remove(n)
         return names
-
 
     def count_entries(
         self,
@@ -180,7 +168,6 @@ class Connection:
         """
         return self[collections_subset].count_entries(filter=filter)
 
-
     def extract_one(
         self,
         filter: Filter | None = None,
@@ -198,7 +185,6 @@ class Connection:
             Entry from the database or `None` if no entry matches the filter.
         """
         return self[collections_subset].extract_one(filter=filter)
-
 
     def extract(
         self,
@@ -229,7 +215,6 @@ class Connection:
         """
         return self[collections_subset].extract(filter=filter, fields=fields)
 
-
     def aggregate(
         self,
         pipeline: list,
@@ -238,9 +223,9 @@ class Connection:
     ) -> Result:
         """Extract entries from the database resulting from a processing pipeline.
 
-        To limit the number of entries that will be returned, use :py:meth:`Result.limit()`. As
-        databases can contain a huge number of entries, it is advised to test the code
-        with a limited result first.
+        To limit the number of entries that will be returned, use
+        :py:meth:`Result.limit()`. As databases can contain a huge number of entries,
+        it is advised to test the code with a limited result first.
 
         To iterate through the entries, see :py:class:`querier.Result`
 
@@ -259,7 +244,6 @@ class Connection:
         """
         return self[collections_subset].aggregate(pipeline, **aggregate_kwargs)
 
-
     def groupby(
         self,
         field_name: str,
@@ -268,7 +252,7 @@ class Connection:
         post_filter: Filter | None = None,
         **aggregate_kwargs,
     ) -> MongoGroupBy:
-        '''Group by a given field and return aggregate results.
+        """Group by a given field and return aggregate results.
 
         Initialize an aggregation pipeline in the collections given by
         `collections_subset` (the default `None` meaning all available
@@ -276,16 +260,16 @@ class Connection:
         the field `field_name`, and then filter according to a `post_filter`.
         The aggregations done in the groupby stage are specified by a subsequent
         call to :py:meth:`MongoGroupBy.agg`.
-        '''
+        """
         return self[collection].groupby(
-            field_name, pre_filter=pre_filter, post_filter=post_filter, **aggregate_kwargs
+            field_name,
+            pre_filter=pre_filter,
+            post_filter=post_filter,
+            **aggregate_kwargs,
         )
 
-
-    def distinct(
-        self, field_name: str, collections_subset: list | None = None
-    ) -> set:
-        """Return a set with all the possible values that the field can take in the database.
+    def distinct(self, field_name: str, collections_subset: list | None = None) -> set:
+        """Return a set with all the possible values that the field can take.
 
         Parameters:
             field_name: The name of the field to test.
@@ -304,35 +288,36 @@ class Connection:
         """
         return self[collections_subset].distinct(field_name)
 
-
     def _field_list_to_projection_dict(fields: list):
-        """Convert a list of field names to a pymongo-formatted projection dictionary."""
+        """Convert a list of field names to a pymongo-formatted projection dict."""
         if fields is None or len(fields) == 0:
             return None
 
-        proj = dict()
-        for f in fields:
-            proj[f] = 1
+        proj = {f: 1 for f in fields}
         return proj
 
-
     def _test_connection(self) -> bool:
-        base_message = "Error accessing the database '"\
-            + self._dbname + "'."
+        base_message = "Error accessing the database '" + self._dbname + "'."
 
         try:
-            self._con.admin.command('ismaster')
+            self._con.admin.command("ismaster")
             return True
 
         except pymongo.errors.OperationFailure as e:
             if e.code == AUTHENTIFICATION_FAILED:
-                message = base_message + " Credentials are wrong or the user "\
+                message = (
+                    base_message
+                    + " Credentials are wrong or the user "
                     + "does not has sufficient permissions."
+                )
                 raise AuthentificationError(message) from None
 
         except pymongo.errors.ServerSelectionTimeoutError:
-            message = base_message + " No Mongo server is available "\
-                    + " at the host or port found in the credentials file"
+            message = (
+                base_message
+                + " No Mongo server is available "
+                + " at the host or port found in the credentials file"
+            )
             raise ServerError(message) from None
 
         except pymongo.errors.ConnectionFailure:
@@ -341,27 +326,24 @@ class Connection:
 
         return False
 
-
     def _get_config_option(config, main_section, option) -> str:
         if not config.has_option(main_section, option):
             raise CredentialsError(
-                "Option '{}' in credentials file is missing".\
-                format(option)) from None
+                "Option '{}' in credentials file is missing".format(option)
+            ) from None
             return None
 
         return config.get(main_section, option)
 
-
     def _find_section_from_suffixes(dbname, config):
         for section in config.sections():
-            if config.has_option(section, 'suffixes'):
-                suffixes = config.get(section, 'suffixes').split(',')
+            if config.has_option(section, "suffixes"):
+                suffixes = config.get(section, "suffixes").split(",")
 
                 for suffix in suffixes:
                     if section + suffix == dbname:
                         return section
         return None
-
 
     def _parse_credentials_file(credentials_path, dbname):
         expanded_path = expanduser(credentials_path)
@@ -373,15 +355,20 @@ class Connection:
                 config.read_file(ifh)
 
         except FileNotFoundError:
-            raise CredentialsError("File '"+expanded_path+"' not found.") from None
+            raise CredentialsError("File '" + expanded_path + "' not found.") from None
         except OSError:
-            raise CredentialsError("Error reading file '"+expanded_path+"'.") from None
+            raise CredentialsError(
+                "Error reading file '" + expanded_path + "'."
+            ) from None
         except configparser.Error as err:
-            module_logger.error("Error parsing file: "+err)
-            raise CredentialsError("Error parsing file '"+expanded_path+"'.") from None
+            module_logger.error("Error parsing file: " + err)
+            raise CredentialsError(
+                "Error parsing file '" + expanded_path + "'."
+            ) from None
         except Exception as err:
-            module_logger.error("Unhandled exception reading '"+expanded_path+"': "+err)
-
+            module_logger.error(
+                "Unhandled exception reading '" + expanded_path + "': " + err
+            )
 
         if config.has_section(dbname):
             section_name = dbname
@@ -390,33 +377,39 @@ class Connection:
 
         if section_name is None:
             raise CredentialsError(
-                "Database name '{}' not found in the credentials file '{}'".\
-                format(dbname, expanded_path))
+                "Database name '{}' not found in the credentials file '{}'".format(
+                    dbname, expanded_path
+                )
+            )
 
         dbtype = Connection._get_config_option(config, section_name, "type")
         user = Connection._get_config_option(config, section_name, "ruser")
-        pwd  = Connection._get_config_option(config, section_name, "rpwd")
+        pwd = Connection._get_config_option(config, section_name, "rpwd")
 
         if not config.has_section(dbtype):
             raise CredentialsError(
-                "Section '{}' is missing in file '{}' (required for database '{}')".\
-                format(dbtype, expanded_path, dbname))
+                "Section '{}' is missing in file '{}' (required for DB '{}')".format(
+                    dbtype, expanded_path, dbname
+                )
+            )
 
         host = Connection._get_config_option(config, dbtype, "host")
         port = Connection._get_config_option(config, dbtype, "port")
 
         return host, port, user, pwd
 
-
     def _create_connection(self, dbname, credentials_path):
-        host, port, user, pwd =\
-            Connection._parse_credentials_file(credentials_path, dbname)
+        host, port, user, pwd = Connection._parse_credentials_file(
+            credentials_path, dbname
+        )
 
         # Connect to DB
-        mongoserver_uri = "mongodb://{u}:{w}@{h}:{p}/{db}?authSource={db}"\
-            .format(db=dbname, u=user, p=port, w=pwd, h=host)
-        conection = pymongo.MongoClient(host=mongoserver_uri,
-            replicaSet=None, connect=True)
+        mongoserver_uri = "mongodb://{u}:{w}@{h}:{p}/{db}?authSource={db}".format(
+            db=dbname, u=user, p=port, w=pwd, h=host
+        )
+        conection = pymongo.MongoClient(
+            host=mongoserver_uri, replicaSet=None, connect=True
+        )
 
         module_logger.info("Started connection to... ")
         module_logger.info("    * Database name: " + dbname)
@@ -428,8 +421,11 @@ class Connection:
 
 
 class CollectionsAccessor:
-
-    def __init__(self, connection: Connection,  collections_subset: str | list[str] | slice | None = None):
+    def __init__(
+        self,
+        connection: Connection,
+        collections_subset: str | list[str] | slice | None = None,
+    ):
         if collections_subset is None:
             collections_subset = slice(None)
         if isinstance(collections_subset, slice):
@@ -468,7 +464,7 @@ class CollectionsAccessor:
         def internal_count(colls, query):
             total = 0
             for coll in colls:
-                if not query: # empty query = {}
+                if not query:  # empty query = {}
                     total += coll.estimated_document_count()
                 else:
                     total += coll.count_documents(query)
@@ -493,7 +489,9 @@ class CollectionsAccessor:
         module_logger.debug("######### Begin extract one #########")
         query = {} if filter is None else filter.get_query()
 
-        module_logger.debug("dbname '{}' | process pid {}".format(self.connection._dbname, getpid()))
+        module_logger.debug(
+            "dbname '{}' | process pid {}".format(self.connection._dbname, getpid())
+        )
         module_logger.debug(query)
 
         @_pymongo_call
@@ -503,7 +501,7 @@ class CollectionsAccessor:
         for coll in self.collections:
             result = internal_extract_one(coll, query)
             if result is not None:
-                module_logger.info("\  => found in collection '{}'".format(coll))
+                module_logger.info("  => found in collection '{}'".format(coll))
                 break
 
         return result
@@ -538,7 +536,9 @@ class CollectionsAccessor:
         module_logger.debug("######### Begin extraction #########")
         query = {} if filter is None else filter.get_query()
 
-        module_logger.debug("dbname '{}' | process pid {}".format(self.connection._dbname, getpid()))
+        module_logger.debug(
+            "dbname '{}' | process pid {}".format(self.connection._dbname, getpid())
+        )
         module_logger.debug(query)
 
         @_pymongo_call
@@ -567,9 +567,9 @@ class CollectionsAccessor:
     ) -> Result:
         """Extract entries from the database resulting from a processing pipeline.
 
-        To limit the number of entries that will be returned, use :py:meth:`Result.limit()`. As
-        databases can contain a huge number of entries, it is advised to test the code
-        with a limited result first.
+        To limit the number of entries that will be returned, use
+        :py:meth:`Result.limit()`. As databases can contain a huge number of entries,
+        it is advised to test the code with a limited result first.
 
         To iterate through the entries, see :py:class:`querier.Result`
 
@@ -587,7 +587,9 @@ class CollectionsAccessor:
         coll_names = []
 
         module_logger.debug("######### Begin extraction #########")
-        module_logger.debug("dbname '{}' | process pid {}".format(self.connection._dbname, getpid()))
+        module_logger.debug(
+            "dbname '{}' | process pid {}".format(self.connection._dbname, getpid())
+        )
 
         @_pymongo_call
         def internal_aggregate(coll, pipeline, **kwargs):
@@ -616,7 +618,7 @@ class CollectionsAccessor:
         silence_warning: bool = False,
         **aggregate_kwargs,
     ) -> MongoGroupBy:
-        '''Group by a given field and return aggregate results.
+        """Group by a given field and return aggregate results.
 
         Initialize an aggregation pipeline in the collections given by
         `collections_subset` (the default `None` meaning all available
@@ -624,7 +626,7 @@ class CollectionsAccessor:
         the field `field_name`, and then filter according to a `post_filter`.
         The aggregations done in the groupby stage are specified by a subsequent
         call to :py:meth:`MongoGroupBy.agg`.
-        '''
+        """
         if aggregate_kwargs is None:
             aggregate_kwargs = {}
 
@@ -632,10 +634,10 @@ class CollectionsAccessor:
         if pre_filter is not None:
             pipeline.append({"$match": pre_filter})
 
-        if not field_name.startswith('$'):
-            field_name = '$' + field_name
-        group_stage = {'_id': field_name}
-        pipeline.append({'$group': group_stage})
+        if not field_name.startswith("$"):
+            field_name = "$" + field_name
+        group_stage = {"_id": field_name}
+        pipeline.append({"$group": group_stage})
 
         if post_filter is not None:
             pipeline.append({"$match": post_filter})
@@ -645,9 +647,10 @@ class CollectionsAccessor:
         )
 
     def distinct(
-        self, field_name: str,
+        self,
+        field_name: str,
     ) -> set:
-        """Return a set with all the possible values that the field can take in the database.
+        """Return a set with all the possible values that the field can take.
 
         Parameters:
             field_name: The name of the field to test.
@@ -661,9 +664,12 @@ class CollectionsAccessor:
             >>>     con.distinct('place.country')
             {'Spain', 'France', 'Portugal', 'Germany', ...}
         """
-        module_logger.debug("######### Begin distinct('{}') #########".format(field_name))
-        module_logger.debug("dbname '{}' | process pid {}"\
-            .format(self.connection._dbname, getpid()))
+        module_logger.debug(
+            "######### Begin distinct('{}') #########".format(field_name)
+        )
+        module_logger.debug(
+            "dbname '{}' | process pid {}".format(self.connection._dbname, getpid())
+        )
 
         @_pymongo_call
         def internal_distinct(coll, field_name):
@@ -673,7 +679,7 @@ class CollectionsAccessor:
         for coll in self.collections:
             d = internal_distinct(coll, field_name)
             if d is not None:
-                module_logger.debug("Executed distinct in "+coll.name)
+                module_logger.debug("Executed distinct in " + coll.name)
                 result = result.union(set(d))
 
         return result
@@ -689,41 +695,45 @@ class MongoGroupBy:
     ):
         self.collections_accessor = collections_accessor
         if len(self.collections_accessor.collections) > 1 and not silence_warning:
-           warnings.warn(
-                "Groupby operates on a per-collection basis, hence you may not obtain the aggregated result you expect by passing more than one collection. If you're aware of this and want to silence this warning, pass `silence_warning=True`.",
-                RuntimeWarning)
+            warnings.warn(
+                """
+                    "Groupby operates on a per-collection basis, hence you may not
+                    obtain the aggregated result you expect by passing more than one
+                    collection. If you're aware of this and want to silence this
+                    warning, pass `silence_warning=True`.
+                """,
+                RuntimeWarning,
+            )
         self.pipeline = pipeline
         self.agg_kwargs = agg_kwargs
 
     def agg(self, **aggregations) -> Result:
-        '''
+        """
         Works on the model of named aggregations of
         :py:meth:`pandas.core.groupby.DataFrameGroupBy.aggregate`, except we
         provide a :py:meth:`querier.NamedAgg` with keywords `field` and
         `aggfunc`. For reference see
         https://pandas.pydata.org/pandas-docs/stable/user_guide/groupby.html?highlight=filter#named-aggregation
-        '''
-        group_stage = [stage for stage in self.pipeline if '$group' in stage][0]
+        """
+        group_stage = [stage for stage in self.pipeline if "$group" in stage][0]
 
         for output_field, agg_descr in aggregations.items():
-            if not hasattr(agg_descr, 'aggfunc'):
+            if not hasattr(agg_descr, "aggfunc"):
                 agg_descr = NamedAgg(*agg_descr)
             aggfunc = agg_descr.aggfunc
-            if not aggfunc.startswith('$'):
-                aggfunc = '$' + aggfunc
+            if not aggfunc.startswith("$"):
+                aggfunc = "$" + aggfunc
 
-            if aggfunc == '$count':
-                aggfunc = '$sum'
+            if aggfunc == "$count":
+                aggfunc = "$sum"
                 input_field = 1
             else:
                 input_field = agg_descr.field
-                if not input_field.startswith('$'):
-                    input_field = '$' + input_field
+                if not input_field.startswith("$"):
+                    input_field = "$" + input_field
 
-            group_stage['$group'][output_field] = {aggfunc: input_field}
+            group_stage["$group"][output_field] = {aggfunc: input_field}
 
-        return self.collections_accessor.aggregate(
-            self.pipeline, **self.agg_kwargs
-        )
+        return self.collections_accessor.aggregate(self.pipeline, **self.agg_kwargs)
 
     aggregate = agg
