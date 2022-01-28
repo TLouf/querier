@@ -382,7 +382,9 @@ class Connection:
             self, pipeline, collection, **aggregate_kwargs
         )
 
-    def distinct(self, field_name: str) -> set:
+    def distinct(
+        self, field_name: str, collections_subset: list | None = None
+    ) -> set:
         """Return a set with all the possible values that the field can take in the database.
 
         Parameters:
@@ -397,6 +399,10 @@ class Connection:
         >>>     con.distinct('place.country')
         {'Spain', 'France', 'Portugal', 'Germany', ...}
         """
+        collections = collections_subset
+        if collections is None:
+            collections = self._db.list_collection_names()
+
         module_logger.debug("######### Begin distinct('{}') #########".format(field_name))        
         module_logger.debug("dbname '{}' | process pid {}"\
             .format(self._dbname, getpid()))
@@ -406,7 +412,7 @@ class Connection:
             return self._db[coll].distinct(field_name)
 
         result = set()
-        for coll in self._db.list_collection_names():
+        for coll in collections:
             d = internal_distinct(self, coll, field_name)
             if d is not None:
                 module_logger.debug("Executed distinct in "+coll)
