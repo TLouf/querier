@@ -129,7 +129,7 @@ class Connection:
     def count_entries(
         self,
         filter: Filter | None = None,
-        collection: str | None = None
+        collections_subset: list | None = None,
     ) -> int:
         """Count the entries that matches a filter.
 
@@ -165,13 +165,11 @@ class Connection:
                     total += coll.count_documents(query)
             return total
         
-        if collection is not None:
-            coll_names = [collection]
-        else:
-            coll_names = self.list_available_collections()    
+        if collections_subset is None:
+            collections_subset = self.list_available_collections()
 
         colls = []
-        for name in coll_names:
+        for name in collections_subset:
             colls.append(self._db[name])
 
         return internal_count(self, colls, query)
@@ -181,7 +179,7 @@ class Connection:
         self,
         filter: Filter | None = None,
         collections_subset: list | None = None,
-    ) -> dict:
+    ) -> dict | None:
         """Extract an entry from the database that matches a filter.
 
         Parameters:
@@ -242,7 +240,7 @@ class Connection:
         filter: Filter | None = None,
         fields: list | None = None,
         collections_subset: list | None = None,
-    ) -> Result : 
+    ) -> Result | None:
         """Extract entries from the database that matches a filter.
 
         To limit the number of entries that will be returned, use
@@ -264,7 +262,7 @@ class Connection:
             database, or `None` if no entry matches the filter.
         """
         cursors = []
-        colls = self._db.list_collection_names()
+        colls = []
         projection = Connection._field_list_to_projection_dict(fields)
 
         module_logger.debug("######### Begin extraction #########")
@@ -291,7 +289,6 @@ class Connection:
                 cursors.append(result)
                 colls.append(coll)
             
-
         # Adds all obtained cursors to the Result object
         r._add_cursors(cursors, colls)
         self._result_pool.append(r)
@@ -301,7 +298,7 @@ class Connection:
     def aggregate(
         self,
         pipeline: list,
-        collections_subset: list | None = None,
+        collection: str,
         **aggregate_kwargs,
     ) -> Result: 
         """Extract entries from the database resulting from a processing pipeline.
@@ -326,30 +323,23 @@ class Connection:
             database, or `None` if no entry matches the filter.
         """
         cursors = []
-        colls = self._db.list_collection_names()
+        colls = []
 
         module_logger.debug("######### Begin extraction #########")
-        
         module_logger.debug("dbname '{}' | process pid {}".format(self._dbname, getpid()))
-
-        collections = collections_subset
-        if collections is None:
-            collections = self._db.list_collection_names()
 
         @_pymongo_call
         def internal_aggregate(self, coll, pipeline, **kwargs):
             return self._db[coll].aggregate(pipeline, **kwargs)
 
         r = Result()
-        for coll in collections:
-            module_logger.debug("    -> Extract in {}".format(coll))
+        module_logger.debug("    -> Extract in {}".format(collection))
 
-            result = internal_aggregate(self, coll, pipeline, **aggregate_kwargs)
+        result = internal_aggregate(self, collection, pipeline, **aggregate_kwargs)
 
             if result is not None:
                 cursors.append(result)
-                colls.append(coll)
-            
+            colls.append(collection)
 
         # Adds all obtained cursors to the Result object
         r._add_cursors(cursors, colls)
@@ -359,9 +349,9 @@ class Connection:
     def groupby(
         self,
         field_name: str,
+        collection: str,
         pre_filter: Filter | None = None,
         post_filter: Filter | None = None,
-        collections_subset: list | None = None,
         **aggregate_kwargs,
     ) -> MongoGroupBy:
         '''Group by a given field and return aggregate results.
@@ -389,6 +379,7 @@ class Connection:
             pipeline.append({"$match": post_filter})
 
         return MongoGroupBy(
+            self, pipeline, collection, **aggregate_kwargs
         )
 
     def distinct(self, field_name: str) -> set:
@@ -551,12 +542,12 @@ class MongoGroupBy:
         self,
         connection: Connection,
         pipeline: list,
-        collections_subset: list | None = None,
+        collection: str,
         **agg_kwargs,
     ):
         self.connection = connection
         self.pipeline = pipeline
-        self.collections_subset = collections_subset
+        self.collection = collection
         self.agg_kwargs = agg_kwargs
 
     def agg(self, **aggregations) -> Result:
@@ -587,5 +578,5 @@ class MongoGroupBy:
             group_stage['$group'][output_field] = {aggfunc: input_field}
 
         return self.connection.aggregate(
-            self.pipeline, collections_subset=self.collections_subset, **self.agg_kwargs
+            self.pipeline, self.collection, **self.agg_kwargs
         )
