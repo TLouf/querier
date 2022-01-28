@@ -580,3 +580,6 @@ class MongoGroupBy:
         return self.connection.aggregate(
             self.pipeline, self.collection, **self.agg_kwargs
         )
+
+    aggregate = agg
+
