@@ -27,6 +27,15 @@ UNAUTHORIZED_COMMAND = 13
 
 
 class NamedAgg(NamedTuple):
+    """NamedTuple describing an aggregation to pass on to :py:meth:`MongoGroupBy.agg`.
+
+    Parameters:
+        field (Hashable): The name of the field on which to apply the aggregation.
+        aggfunc (str):
+            The name of the aggregation function to apply. Most common aggregation
+            functions work ("sum", "min", "mean"...). For a full reference see
+            https://docs.mongodb.com/manual/reference/operator/aggregation/group/#accumulator-operator
+    """
     field: Hashable
     aggfunc: str
 
@@ -60,24 +69,16 @@ def _pymongo_call(f):
 class Connection:
     """Establishes a connection with a database and allows data retrieval.
     
-    The constructor takes two parameters:
+    The first parameter (`dbnamecfg`) must be a valid database name. The
+    database administrator should provide both the credentials and the database
+    names you are allowed to access.
 
-    :Parameters:
-        - dbnamecfg: The name of the database
-        - credentials_path [defaults='~/.credentials.cfg']: Path to a configuration file (.cfg) with credentials for the database.
+    Parameters:
+        dbnamecfg (str): The name of the database
+        credentials_path (str, default "~/.credentials.cfg"):
+            Path to a configuration file (.cfg) with credentials for the database.
             
-    .. note::
-        The first parameter (*dbnamecfg*) must be a valid database name. The database administrator
-        should provide both the credentials and the database names you are allowed to access.
-
-
-    When a Connection object is created the connection process will be initiated. This process 
-    will try to connect to the database with a maximum deadline of 30 seconds.  
-
-    A Connection should be closed when it's no longer in use, either by using 
-    the method :py:meth:`Connection.close()` or the python's 'with' keyword 
-    (being the later preferred whenever it's possible).
-
+    Examples:
     The following snippet shows the most simple way to create a Connection::
 
         from querier import Connection
@@ -90,12 +91,6 @@ class Connection:
     """
 
     def __init__(self, dbnamecfg: str, credentials_path: str = "~/.credentials.cfg"):
-        """Create and initiate a connection to a database.
-
-        :param dbnamecfg: name of the database
-        :param credentials_path: path to a configuration file with the credentials
-        to read the database
-        """
         con, db = self._create_connection(dbnamecfg, credentials_path)
         self._con = con
         self._db = db
@@ -138,7 +133,18 @@ class Connection:
     ) -> int:
         """Count the entries that matches a filter.
 
-        Example: Count how many tweets from Spain in 2014 have more than 500 favorites
+        Parameters:
+            filter: Filter object to count entries or `None` (all entries).
+            collection: A collection name from
+                :py:meth:`Connection.list_available_collections()` or `None`
+                (all collections).
+
+        Returns:
+            The number of entries in `collection` matching `filter`.
+
+        Examples:
+            Count how many tweets from Spain in 2014 have more than 500
+            favorites:
 
         >>> from querier import *
         >>> f = Filter()
@@ -146,9 +152,6 @@ class Connection:
         >>> with Connection('twitter_2014') as con:
         >>>     count = con.count_entries(f, collection='spain')
         3
-
-        :param filter: Filter object to count entries or None (all entries)
-        :param collection: A collection name from :py:meth:`Connection.list_available_collections()` or None (all collections)
         """
         query = {} if filter is None else filter.get_query()
 
@@ -181,9 +184,14 @@ class Connection:
     ) -> dict:
         """Extract an entry from the database that matches a filter.
 
-        :param filter: filter that will be used to test the entries
-        :param collections_subset: list of collections to extract from. A subset of :py:meth:`Connection.list_available_collections()`
-        :return: entry from the database or None if no entry matches the filter
+        Parameters:
+            filter: Filter used to test the entries or `None` (all entries)
+            collections_subset: List of collections to extract from. A subset of
+                :py:meth:`Connection.list_available_collections()` or `None`
+                (all collections)
+
+        Returns:
+            Entry from the database or `None` if no entry matches the filter.
         """
         result = None
         
@@ -219,7 +227,8 @@ class Connection:
 
         Extraction methods can be sped up by using a subset of collections.
 
-        :return: a list of all the available collection names
+        Returns:
+            A list of all the available collection names
         """
         names = self._db.list_collection_names()
         for n in names:
@@ -236,17 +245,23 @@ class Connection:
     ) -> Result : 
         """Extract entries from the database that matches a filter.
 
-        To limit the number of entries that will be returned, use :py:meth:`Result.limit()`. As 
-        databases can contain a huge number of entries, it is advised to test the code 
-        with a limited result first.
+        To limit the number of entries that will be returned, use
+        :py:meth:`Result.limit()`. As databases can contain a huge number of
+        entries, it is advised to test the code with a limited result first.
 
         To iterate through the entries, see :py:class:`querier.Result`
 
-        :param filter: filter to test the entries
-        :param fields: List of selected fields from the original database that the result dictionaries 
-                       will have. This is useful when only a subset of the fields is needed.
-        :param collections_subset: list of collections to extract from. A subset of :py:meth:`Connection.list_available_collections()`
-        :return: entry from the database or None if no entry matches the filter
+        Parameters:
+            filter: Filter to test the entries.
+            fields: List of selected fields from the original database that the
+                result dictionaries will have. This is useful when only a subset
+                of the fields is needed.
+            collections_subset: list of collections to extract from. A subset of
+                :py:meth:`Connection.list_available_collections()`
+
+        Returns:
+            Result enabling to iterate through the matching entries in the
+            database, or `None` if no entry matches the filter.
         """
         cursors = []
         colls = self._db.list_collection_names()
@@ -297,10 +312,18 @@ class Connection:
 
         To iterate through the entries, see :py:class:`querier.Result`
 
-        :param pipeline: filter to test the entries
-        :param collections_subset: list of collections to extract from. A subset of :py:meth:`Connection.list_available_collections()`
-        :param aggregate_kwargs: additional keyword arguments to pass on to :py:meth:`pymongo.collection.Collection.aggregate`
-        :return: entry from the database or None if no entry matches the filter
+        Parameters:
+            pipeline: filter to test the entries
+            collections_subset:
+                list of collections to extract from. A subset of
+                :py:meth:`Connection.list_available_collections()`
+            **aggregate_kwargs:
+                additional keyword arguments to pass on to
+                :py:meth:`pymongo.collection.Collection.aggregate`
+
+        Returns:
+            Result enabling to iterate through the matching entries in the
+            database, or `None` if no entry matches the filter.
         """
         cursors = []
         colls = self._db.list_collection_names()
@@ -340,7 +363,7 @@ class Connection:
         post_filter: Filter | None = None,
         collections_subset: list | None = None,
         **aggregate_kwargs,
-    ) -> MongoGroupby:
+    ) -> MongoGroupBy:
         '''Group by a given field and return aggregate results.
 
         Initialize an aggregation pipeline in the collections given by
@@ -348,7 +371,7 @@ class Connection:
         collections), in which we filter according to a `pre_filter`, group by
         the field `field_name`, and then filter according to a `post_filter`.
         The aggregations done in the groupby stage are specified by a subsequent
-        call to :py:meth:`MongoGroupby.agg`.
+        call to :py:meth:`MongoGroupBy.agg`.
         '''
         if aggregate_kwargs is None:
             aggregate_kwargs = {}
@@ -365,23 +388,23 @@ class Connection:
         if post_filter is not None:
             pipeline.append({"$match": post_filter})
 
-        return MongoGroupby(
-            self, pipeline, collections_subset=collections_subset, **aggregate_kwargs
+        return MongoGroupBy(
         )
 
     def distinct(self, field_name: str) -> set:
         """Return a set with all the possible values that the field can take in the database.
 
-        Example:
+        Parameters:
+            field_name: The name of the field to test.
 
+        Returns:
+            Set of distinct values.
+
+        Examples:
         >>> import querier
         >>> with querier.Connection('twitter_2020') as con:
         >>>     con.distinct('place.country')
         {'Spain', 'France', 'Portugal', 'Germany', ...}
-            
-
-        :param field_name: The name of the field to test
-        :return: set of different values
         """
         module_logger.debug("######### Begin distinct('{}') #########".format(field_name))        
         module_logger.debug("dbname '{}' | process pid {}"\
@@ -523,7 +546,7 @@ class Connection:
         return conection, conection[dbname]
 
 
-class MongoGroupby:
+class MongoGroupBy:
     def __init__(
         self,
         connection: Connection,

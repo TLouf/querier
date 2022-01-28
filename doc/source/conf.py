@@ -22,12 +22,12 @@ import sys
 
 # -- Project information -----------------------------------------------------
 
-project = 'querier'
+project = querier.__name__
 copyright = '2022, Sergi'
 author = 'Sergi'
 
 # The full version, including alpha/beta/rc tags
-release = '[0.0.5]'
+release = str(querier.__version__)
 
 
 # -- General configuration ---------------------------------------------------
@@ -37,11 +37,17 @@ release = '[0.0.5]'
 # ones.
 extensions = [
     'sphinx.ext.autodoc',
+    'sphinx.ext.napoleon',
     'sphinx.ext.linkcode',
     'sphinx.ext.intersphinx',
     'sphinx_autodoc_typehints',
     'sphinx_copybutton',
 ]
+
+napoleon_use_rtype = False
+napoleon_use_admonition_for_examples = True
+napoleon_use_admonition_for_notes = True
+typehints_document_rtype = True
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -58,6 +64,10 @@ exclude_patterns = []
 # a list of builtin themes.
 #
 html_theme = 'sphinx_rtd_theme'
+
+html_theme_options = {
+    'collapse_navigation': False,
+}
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
