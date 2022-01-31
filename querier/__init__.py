@@ -1,22 +1,23 @@
 import logging
 import logging.handlers
 
-from .filter import Filter
-from .result import Result
-from .connection import Connection, MongoGroupBy, NamedAgg
-from .exceptions import (
-    InvalidFilter,
-    CredentialsError,
+from querier.connection import CollectionsAccessor, Connection, MongoGroupBy, NamedAgg
+from querier.exceptions import (
     AuthentificationError,
-    ServerError,
+    CredentialsError,
     InternalError,
+    InvalidFilter,
+    ServerError,
 )
+from querier.filter import Filter
+from querier.result import Result
 
 __all__ = [
-    "Connection", 
+    "Connection",
     "Result",
     "Filter",
     "MongoGroupBy",
+    "CollectionsAccessor",
     "NamedAgg",
     "InvalidFilter",
     "CredentialsError",
@@ -26,11 +27,12 @@ __all__ = [
 ]
 __version__ = "0.0.5"
 
+
 def init_logger(name, filename, level=logging.DEBUG):
     logger = logging.getLogger(name)
     logger.setLevel(level)
 
-    file_formatter = logging.Formatter('[%(levelname)s] <%(asctime)s>: %(message)s')
+    file_formatter = logging.Formatter("[%(levelname)s] <%(asctime)s>: %(message)s")
 
     max_size = 256 * 1024
     fh = logging.handlers.RotatingFileHandler(filename, maxBytes=max_size)
@@ -38,5 +40,6 @@ def init_logger(name, filename, level=logging.DEBUG):
 
     logger.addHandler(fh)
     return logger
+
 
 init_logger("querier", "querier.log")
