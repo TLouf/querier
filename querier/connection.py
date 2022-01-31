@@ -7,12 +7,16 @@ import warnings
 from functools import wraps
 from os import getpid
 from os.path import expanduser
-from typing import TYPE_CHECKING, Hashable, NamedTuple
+from typing import TYPE_CHECKING, Any, NamedTuple
 
 import pymongo
 
-from querier.exceptions import (AuthentificationError, CredentialsError,
-                                InternalError, ServerError)
+from querier.exceptions import (
+    AuthentificationError,
+    CredentialsError,
+    InternalError,
+    ServerError,
+)
 from querier.result import Result
 
 if TYPE_CHECKING:
@@ -27,14 +31,14 @@ class NamedAgg(NamedTuple):
     """NamedTuple describing an aggregation to pass on to :py:meth:`MongoGroupBy.agg`.
 
     Parameters:
-        field (Hashable): The name of the field on which to apply the aggregation.
+        field (str): The name of the field on which to apply the aggregation.
         aggfunc (str):
             The name of the aggregation function to apply. Most common aggregation
             functions work ("sum", "min", "mean"...). For a full reference see
             https://docs.mongodb.com/manual/reference/operator/aggregation/group/#accumulator-operator
     """
 
-    field: Hashable
+    field: str
     aggfunc: str
 
 
@@ -91,7 +95,7 @@ class Connection:
         self._con = con
         self._db = db
         self._dbname = dbnamecfg
-        self._result_pool = []
+        self._result_pool: list[Result] = []
         self._test_connection()
 
     # Called on enter to 'with' keyword
@@ -105,7 +109,7 @@ class Connection:
     def __del__(self):
         self.close()
 
-    def __getitem__(self, coll_names: str | list[str] | slice):
+    def __getitem__(self, coll_names: str | list[str] | slice | None):
         return CollectionsAccessor(self, coll_names)
 
     def close(self):
@@ -124,9 +128,9 @@ class Connection:
     def list_available_collections(self) -> list:
         """Return a list of available collections.
 
-        MongoDB databases can be splitted by collections. For example, all tweets from
+        MongoDB databases can be split by collections. For example, all tweets from
         USA are in collection 'northern_america' in twitter databases. Contact the
-        database administrator to know how/if collections are semantically splitted.
+        database administrator to know how/if collections are semantically split.
 
         Extraction methods can be sped up by using a subset of collections.
 
@@ -288,14 +292,6 @@ class Connection:
         """
         return self[collections_subset].distinct(field_name)
 
-    def _field_list_to_projection_dict(fields: list):
-        """Convert a list of field names to a pymongo-formatted projection dict."""
-        if fields is None or len(fields) == 0:
-            return None
-
-        proj = {f: 1 for f in fields}
-        return proj
-
     def _test_connection(self) -> bool:
         base_message = "Error accessing the database '" + self._dbname + "'."
 
@@ -326,88 +322,14 @@ class Connection:
 
         return False
 
-    def _get_config_option(config, main_section, option) -> str:
-        if not config.has_option(main_section, option):
-            raise CredentialsError(
-                "Option '{}' in credentials file is missing".format(option)
-            ) from None
-            return None
-
-        return config.get(main_section, option)
-
-    def _find_section_from_suffixes(dbname, config):
-        for section in config.sections():
-            if config.has_option(section, "suffixes"):
-                suffixes = config.get(section, "suffixes").split(",")
-
-                for suffix in suffixes:
-                    if section + suffix == dbname:
-                        return section
-        return None
-
-    def _parse_credentials_file(credentials_path, dbname):
-        expanded_path = expanduser(credentials_path)
-        config = configparser.RawConfigParser(allow_no_value=True)
-
-        try:
-
-            with open(expanded_path) as ifh:
-                config.read_file(ifh)
-
-        except FileNotFoundError:
-            raise CredentialsError("File '" + expanded_path + "' not found.") from None
-        except OSError:
-            raise CredentialsError(
-                "Error reading file '" + expanded_path + "'."
-            ) from None
-        except configparser.Error as err:
-            module_logger.error("Error parsing file: " + err)
-            raise CredentialsError(
-                "Error parsing file '" + expanded_path + "'."
-            ) from None
-        except Exception as err:
-            module_logger.error(
-                "Unhandled exception reading '" + expanded_path + "': " + err
-            )
-
-        if config.has_section(dbname):
-            section_name = dbname
-        else:
-            section_name = Connection._find_section_from_suffixes(dbname, config)
-
-        if section_name is None:
-            raise CredentialsError(
-                "Database name '{}' not found in the credentials file '{}'".format(
-                    dbname, expanded_path
-                )
-            )
-
-        dbtype = Connection._get_config_option(config, section_name, "type")
-        user = Connection._get_config_option(config, section_name, "ruser")
-        pwd = Connection._get_config_option(config, section_name, "rpwd")
-
-        if not config.has_section(dbtype):
-            raise CredentialsError(
-                "Section '{}' is missing in file '{}' (required for DB '{}')".format(
-                    dbtype, expanded_path, dbname
-                )
-            )
-
-        host = Connection._get_config_option(config, dbtype, "host")
-        port = Connection._get_config_option(config, dbtype, "port")
-
-        return host, port, user, pwd
-
     def _create_connection(self, dbname, credentials_path):
-        host, port, user, pwd = Connection._parse_credentials_file(
-            credentials_path, dbname
-        )
+        host, port, user, pwd = _parse_credentials_file(credentials_path, dbname)
 
         # Connect to DB
         mongoserver_uri = "mongodb://{u}:{w}@{h}:{p}/{db}?authSource={db}".format(
             db=dbname, u=user, p=port, w=pwd, h=host
         )
-        conection = pymongo.MongoClient(
+        connection = pymongo.MongoClient(
             host=mongoserver_uri, replicaSet=None, connect=True
         )
 
@@ -417,10 +339,32 @@ class Connection:
         module_logger.info("    * Port: " + port)
         module_logger.info("    * PID: " + repr(getpid()))
 
-        return conection, conection[dbname]
+        return connection, connection[dbname]
 
 
 class CollectionsAccessor:
+    """Provides access to one or several collections of a database for data retrieval.
+
+    An instance of this class is normally obtained through a :py:class:`Connection`
+    instance, selecting with square brackets the collection(s), as one would select
+    columns from a pandas DataFrame for instance.
+
+    Parameters:
+        connection (Connection): Database connection used to retrieve data.
+        collections_subset (optional):
+            Collections of the database from which to retrieve the data.
+
+    Examples:
+        To extract a single document from the collections `colls` of the database
+        `dbname`::
+
+            from querier import Connection
+
+            colls = ["collection A", "collection B"]
+            with Connection(dbname) as con:
+                result = con[colls].extract_one()
+    """
+
     def __init__(
         self,
         connection: Connection,
@@ -531,7 +475,7 @@ class CollectionsAccessor:
         """
         cursors = []
         coll_names = []
-        projection = Connection._field_list_to_projection_dict(fields)
+        projection = _field_list_to_projection_dict(fields)
 
         module_logger.debug("######### Begin extraction #########")
         query = {} if filter is None else filter.get_query()
@@ -630,7 +574,7 @@ class CollectionsAccessor:
         if aggregate_kwargs is None:
             aggregate_kwargs = {}
 
-        pipeline = []
+        pipeline: list[dict[str, Filter | dict]] = []
         if pre_filter is not None:
             pipeline.append({"$match": pre_filter})
 
@@ -675,7 +619,7 @@ class CollectionsAccessor:
         def internal_distinct(coll, field_name):
             return coll.distinct(field_name)
 
-        result = set()
+        result: set[Any] = set()
         for coll in self.collections:
             d = internal_distinct(coll, field_name)
             if d is not None:
@@ -737,3 +681,82 @@ class MongoGroupBy:
         return self.collections_accessor.aggregate(self.pipeline, **self.agg_kwargs)
 
     aggregate = agg
+
+
+def _get_config_option(config, main_section, option) -> str:
+    if not config.has_option(main_section, option):
+        raise CredentialsError(
+            "Option '{}' in credentials file is missing".format(option)
+        ) from None
+
+    return config.get(main_section, option)
+
+
+def _find_section_from_suffixes(dbname, config):
+    for section in config.sections():
+        if config.has_option(section, "suffixes"):
+            suffixes = config.get(section, "suffixes").split(",")
+
+            for suffix in suffixes:
+                if section + suffix == dbname:
+                    return section
+    return None
+
+
+def _parse_credentials_file(credentials_path, dbname):
+    expanded_path = expanduser(credentials_path)
+    config = configparser.RawConfigParser(allow_no_value=True)
+
+    try:
+
+        with open(expanded_path) as ifh:
+            config.read_file(ifh)
+
+    except FileNotFoundError:
+        raise CredentialsError("File '" + expanded_path + "' not found.") from None
+    except OSError:
+        raise CredentialsError("Error reading file '" + expanded_path + "'.") from None
+    except configparser.Error as err:
+        module_logger.error("Error parsing file: " + err)
+        raise CredentialsError("Error parsing file '" + expanded_path + "'.") from None
+    except Exception as err:
+        module_logger.error(
+            "Unhandled exception reading '" + expanded_path + "': " + err
+        )
+
+    if config.has_section(dbname):
+        section_name = dbname
+    else:
+        section_name = _find_section_from_suffixes(dbname, config)
+
+    if section_name is None:
+        raise CredentialsError(
+            "Database name '{}' not found in the credentials file '{}'".format(
+                dbname, expanded_path
+            )
+        )
+
+    dbtype = _get_config_option(config, section_name, "type")
+    user = _get_config_option(config, section_name, "ruser")
+    pwd = _get_config_option(config, section_name, "rpwd")
+
+    if not config.has_section(dbtype):
+        raise CredentialsError(
+            "Section '{}' is missing in file '{}' (required for DB '{}')".format(
+                dbtype, expanded_path, dbname
+            )
+        )
+
+    host = _get_config_option(config, dbtype, "host")
+    port = _get_config_option(config, dbtype, "port")
+
+    return host, port, user, pwd
+
+
+def _field_list_to_projection_dict(fields: list | None):
+    """Convert a list of field names to a pymongo-formatted projection dict."""
+    if fields is None or len(fields) == 0:
+        return None
+
+    proj = {f: 1 for f in fields}
+    return proj
