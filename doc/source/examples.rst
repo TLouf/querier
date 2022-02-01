@@ -1,10 +1,14 @@
 Examples
 ========
 
-The following snippets exemplify how to perform several extractions with querier
+The following snippets exemplify how to perform several extractions with querier.
 
 
-**1. Sample entries**::
+Sample entries
+--------------
+
+This example shows how to take a sample from the twitter database and print it in a
+human readable way::
 
     import querier
     from pprint import pprint
@@ -15,14 +19,18 @@ The following snippets exemplify how to perform several extractions with querier
         result = con.extract_one(querier.Filter())
         pprint(result)
 
-This example shows how to take a sample from the twitter database and print it in a human 
-readable way. Due to the nature of MongoDB databases entries
-can have missing fields (use :py:meth:`querier.Filter.exists` to filter entries where a field is not missing). 
+Due to the nature of MongoDB databases, entries can have missing fields (use
+:py:meth:`querier.Filter.exists` to filter entries where a field is not missing).
 
-It can be useful to sample a database first to know the entries fields.
+It can be useful to sample a database this way first to know the entries' fields.
 
 
-**2. Extraction from a database**::
+Extraction from a database
+--------------------------
+
+This example shows a way to extract tweets and store them in a *.gz* file. The tweets
+extracted were twitted from spain in 2020 between March and September (note that we only
+store the fields 'place', 'user' and 'id')::
 
     import querier
     import json
@@ -45,25 +53,28 @@ It can be useful to sample a database first to know the entries fields.
     fields = ['place', 'user', 'id']
 
     # Extraction
-    with gzip.open('twitter_2020_ES.gz', 'wb') as outfile: 
+    with gzip.open('twitter_2020_ES.gz', 'wb') as outfile:
         with querier.Connection(database_name) as con:
 
             tweets_es = con.extract(f, fields).limit(100)
-            
+
             for tweet in tweets_es:
                 tweet_str = json.dumps(tweet, default=str)
                 outfile.write((tweet_str + '\n').encode('utf-8'))
 
 
-This example shows a way to extract tweets and store them in a *.gz* file. The tweets extracted were 
-twitted from spain in 2020 between March and September (note that we only store the fields 'place', 'user' and 'id')
+As databases can be (and often are) massive, it is advised to limit the selected fields
+and store entries in files whenever its strictly required. To limit the extraction is a
+good practice when testing code that extracts data from the database (as databases can
+contain up to millions of entries).
 
-As databases can be (and often are) massive, it is advised to limit
-the selected fields and store entries in files whenever its strictly required. To limit the extraction 
-is a good practice when testing code that extracts data from the database (as databases can contain up to millions
-of entries).
 
-**3. Multiple Connections**::
+Multiple Connections
+--------------------
+
+
+This example prints (in a human readable way) the tweet from Spain with the most
+favorite number::
 
     import querier
     from pprint import pprint
@@ -86,15 +97,11 @@ of entries).
                     continue
 
                 if tweet['favorite_count'] > max_tweet['favorite_count']:
-                    max_tweet = tweet 
+                    max_tweet = tweet
 
 
     pprint(max_tweet)
 
-This example prints (in a human readable way) the tweet from spain with the most favorite number.
-
-It shows a way to extract entries from several databases using more than
-one connection. Twitter databases are splitted by year and named twitter_{year} requiring
-more than a Connection object to extract tweets from different years.
-
-
+It shows a way to extract entries from several databases using more than one connection.
+Twitter databases are split by year and named twitter_{year} requiring more than one
+Connection object to extract tweets from different years.
