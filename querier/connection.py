@@ -195,7 +195,7 @@ class Connection:
         filter: Filter | None = None,
         fields: list | None = None,
         collections_subset: list | None = None,
-    ) -> Result | None:
+    ) -> Result:
         """Extract entries from the database that matches a filter.
 
         To limit the number of entries that will be returned, use
@@ -450,7 +450,7 @@ class CollectionsAccessor:
         for coll in self.collections:
             result = internal_extract_one(coll, query)
             if result is not None:
-                module_logger.info("  => found in collection '{}'".format(coll))
+                module_logger.info("  => found in collection '{}'".format(coll.name))
                 break
 
         return result
@@ -459,7 +459,7 @@ class CollectionsAccessor:
         self,
         filter: Filter | None = None,
         fields: list | None = None,
-    ) -> Result | None:
+    ) -> Result:
         """Extract entries from the database that matches a filter.
 
         To limit the number of entries that will be returned, use
@@ -496,7 +496,7 @@ class CollectionsAccessor:
 
         r = Result()
         for coll in self.collections:
-            module_logger.debug("    -> Extract in {}".format(coll))
+            module_logger.debug("    -> Extract in {}".format(coll.name))
 
             result = internal_extract(coll, query, projection)
 
