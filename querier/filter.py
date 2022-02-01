@@ -84,7 +84,7 @@ class Filter(dict):
         return self
 
     def exists(self, field_id: str) -> Filter:
-        """Add a condition to the filter that matches when the field exists.
+        """Add a condition to the filter that matches when the field exist.
 
         **python equivalent:** ``field_id is not None``
         """
@@ -92,7 +92,7 @@ class Filter(dict):
         return self
 
     def not_exists(self, field_id: str) -> Filter:
-        """Add a condition to the filter that matches when the field doesn't exists.
+        """Add a condition to the filter that matches when the field doesn't exist.
 
         **python equivalent:** ``field_id is None``
         """
@@ -101,7 +101,7 @@ class Filter(dict):
 
     def equals(self, field_id, value: str) -> Filter:
         """
-        Add a condition to the filter that matches when the field is equals to a value.
+        Add a condition to the filter that matches when the field is equal to a value.
 
         **python equivalent:** ``field_id == value``
         """
@@ -156,8 +156,8 @@ class Filter(dict):
 
     def greater_or_equals(self, field_id: str, value) -> Filter:
         """
-        Add a condition to the filter that matches when the field is greater or equals
-        than a value.
+        Add a condition to the filter that matches when the field is greater or equal
+        to a value.
 
         **python equivalent:** ``field_id >= value``
         """
@@ -175,7 +175,7 @@ class Filter(dict):
 
     def less_or_equals(self, field_id, value) -> Filter:
         """
-        Add a condition to the filter that matches when the field is less or equals than
+        Add a condition to the filter that matches when the field is less or equal to
         a value.
 
         **python equivalent:** ``field_id <= value``
@@ -203,6 +203,27 @@ class Filter(dict):
         """
         Add a condition to the filter that matches when the field's geometry is fully
         contained within a geometry `geo`.
+
+        Parameters:
+            field_id: Name of the field supposed to contain geometries.
+            geo:
+                Geometry within which they have to be to pass the filter. Can be given
+                as a shapely geometry or as nested lists giving the coordinates of the
+                geometry. For ``geo_type="bbox"``, should be
+                ``[minx, miny, maxx, maxy]``.
+            geo_type:
+                Type of the geometry: "Polygon", "MultiPolygon" or "bbox". Does not need
+                to be specified when `geo` is a shapely geometry.
+            invert:
+                If True, filters out geometries that are within `geo`, if False
+                (default), keeps only those that are within `geo`.
+
+        Warnings:
+            Geometries in MongoDB use ``EPSG:4326`` as the default coordinate reference
+            system (CRS). Beware also that the geometries in the field `field_id` should
+            be valid, so for instance polygons should be closed. This is not the case
+            for ``place.bounding_box`` in tweet collections, and only the case for
+            ``valid_bounding_box`` in places collections.
         """
         return self._geo_op("$geoWithin", field_id, geo, geo_type, invert)
 
@@ -216,6 +237,27 @@ class Filter(dict):
         """
         Add a condition to the filter that matches when the field's geometry intersects
         with a geometry `geo`.
+
+        Parameters:
+            field_id: Name of the field supposed to contain geometries.
+            geo:
+                Geometry that has to be intersected to pass the filter. Can be given as
+                a shapely geometry or as nested lists giving the coordinates of the
+                geometry. For ``geo_type="bbox"``, should be
+                ``[minx, miny, maxx, maxy]``.
+            geo_type:
+                Type of the geometry: "Polygon", "MultiPolygon" or "bbox". Does not need
+                to be specified when `geo` is a shapely geometry.
+            invert:
+                If True, filters out geometries that intersect `geo`, if False
+                (default), keeps only those that intersect `geo`.
+
+        Warnings:
+            Geometries in MongoDB use ``EPSG:4326`` as the default coordinate reference
+            system (CRS). Beware also that the geometries in the field `field_id` should
+            be valid, so for instance polygons should be closed. This is not the case
+            for ``place.bounding_box`` in tweet collections, and only the case for
+            ``valid_bounding_box`` in places collections.
         """
         return self._geo_op("$geoIntersects", field_id, geo, geo_type, invert)
 
@@ -239,19 +281,28 @@ class Filter(dict):
                     geo.append(geo[0])
                 geo_dict = {"coordinates": [geo], "type": geo_type}
 
-            value = {"$geometry": geo_dict}
-
         # If geo type is box or bbox or bounding_box...
         elif geo_type.lower().endswith("box"):
             # `geo` assumed in format (min_x, min_y, max_x, max_y), as the
-            # return value of GeoDataFrame.total_bounds. 'box' only for field
-            # containing legacy coordinates, that is not geojson but arrays of
-            # coordinates or stuff like that
-            value = {"$box": [[geo[0], geo[1]], [geo[2], geo[3]]]}
+            # return value of GeoDataFrame.total_bounds.
+            minx, miny, maxx, maxy = geo
+            geo_dict = {
+                "coordinates": [
+                    [
+                        [minx, miny],
+                        [minx, maxy],
+                        [maxx, maxy],
+                        [maxx, miny],
+                        [minx, miny],
+                    ]
+                ],
+                "type": "Polygon",
+            }
 
         else:
             raise ValueError('geo_type must either be "(Multi)Polygon" or "bbox"')
 
+        value = {"$geometry": geo_dict}
         self._add_operation(field_id, op, value, invert=invert)
 
     def is_empty(self) -> bool:
@@ -268,8 +319,8 @@ class Filter(dict):
             self
 
         Raises:
-            InvalidFilter if one of the filters is empty or both filters are the same
-            object.
+            InvalidFilter: if one of the filters is empty or both filters are the same
+                object.
 
         Examples:
             Create a Filter f1 that matches tweets with a number of retweets
@@ -284,6 +335,11 @@ class Filter(dict):
                 f2.greater_or_equals('favorite_count', 500)
 
                 f1.or_filter(f2)
+
+            Alternative notation using the ``|`` operator, not modifying `f1` in place
+            but getting the resulting Filter as a new instance `f3`::
+
+                f3 = f1 | f2
         """
         self = self | other
         return self
@@ -298,8 +354,8 @@ class Filter(dict):
             self
 
         Raises:
-            InvalidFilter if one of the filters is empty or both filters are the same
-            object
+            InvalidFilter: if one of the filters is empty or both filters are the same
+                object
 
         Examples:
             Create a Filter f1 that matches tweets with a number of retweets between
@@ -314,6 +370,11 @@ class Filter(dict):
                 f2.less_or_equals('retweet_count', 1000)
 
                 f1.and_filter(f2)
+
+            Alternative notation using the ``&`` operator, not modifying `f1` in place
+            but getting the resulting Filter as a new instance `f3`::
+
+                f3 = f1 & f2
         """
         self = self & other
         return self

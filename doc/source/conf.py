@@ -4,10 +4,11 @@
 # list see the documentation:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 
-import querier
 import inspect
 import os
 import sys
+
+import querier
 
 # -- Path setup --------------------------------------------------------------
 
@@ -23,8 +24,8 @@ import sys
 # -- Project information -----------------------------------------------------
 
 project = querier.__name__
-copyright = '2022, Sergi'
-author = 'Sergi'
+copyright = "2022, Sergi"
+author = "Sergi"
 
 # The full version, including alpha/beta/rc tags
 release = str(querier.__version__)
@@ -36,12 +37,12 @@ release = str(querier.__version__)
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    'sphinx.ext.autodoc',
-    'sphinx.ext.napoleon',
-    'sphinx.ext.linkcode',
-    'sphinx.ext.intersphinx',
-    'sphinx_autodoc_typehints',
-    'sphinx_copybutton',
+    "sphinx.ext.autodoc",
+    "sphinx.ext.napoleon",
+    "sphinx.ext.linkcode",
+    "sphinx.ext.intersphinx",
+    "sphinx_autodoc_typehints",
+    "sphinx_copybutton",
 ]
 
 napoleon_use_rtype = False
@@ -50,7 +51,7 @@ napoleon_use_admonition_for_notes = True
 typehints_document_rtype = True
 
 # Add any paths that contain templates here, relative to this directory.
-templates_path = ['_templates']
+templates_path = ["_templates"]
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
@@ -63,22 +64,27 @@ exclude_patterns = []
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'sphinx_rtd_theme'
+html_theme = "sphinx_rtd_theme"
 
 html_theme_options = {
-    'collapse_navigation': False,
+    "collapse_navigation": False,
 }
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['_static']
+html_static_path = ["_static"]
 
 intersphinx_mapping = {
     "pymongo": ("https://pymongo.readthedocs.io/en/stable/", None),
     "python": ("https://docs.python.org/3/", None),
     "pandas": ("https://pandas.pydata.org/pandas-docs/stable/", None),
+    "shapely": (
+        "https://shapely.readthedocs.io/en/stable/",
+        "https://shapely.readthedocs.io/en/stable/objects.inv",
+    ),
 }
+
 
 # from pandas
 def linkcode_resolve(domain, info):
