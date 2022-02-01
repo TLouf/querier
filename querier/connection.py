@@ -221,7 +221,7 @@ class Connection:
 
     def aggregate(
         self,
-        pipeline: list,
+        pipeline: list[dict],
         collections_subset: list | None = None,
         **aggregate_kwargs,
     ) -> Result:
@@ -231,13 +231,15 @@ class Connection:
         :py:meth:`Result.limit()`. As databases can contain a huge number of entries,
         it is advised to test the code with a limited result first.
 
-        To iterate through the entries, see :py:class:`querier.Result`
+        To iterate through the entries, see :py:class:`querier.Result`.
 
         Parameters:
-            pipeline: filter to test the entries
-            collections_subset: List of collections to extract from. A subset of
-                :py:meth:`Connection.list_available_collections()` or `None`
-                (all collections).
+            pipeline:
+                List of `aggregation pipeline stages`_.
+            collections_subset:
+                List of collections to extract from. A subset of
+                :py:meth:`Connection.list_available_collections()` or `None` (all
+                collections).
             **aggregate_kwargs:
                 additional keyword arguments to pass on to
                 :py:meth:`pymongo.collection.Collection.aggregate`
@@ -245,6 +247,9 @@ class Connection:
         Returns:
             Result enabling to iterate through the matching entries in the
             database, or `None` if no entry matches the filter.
+
+        .. _aggregation pipeline stages:
+            https://docs.mongodb.com/manual/reference/operator/aggregation-pipeline/
         """
         return self[collections_subset].aggregate(pipeline, **aggregate_kwargs)
 
@@ -256,7 +261,7 @@ class Connection:
         post_filter: Filter | None = None,
         **aggregate_kwargs,
     ) -> MongoGroupBy:
-        """Group by a given field and return aggregate results.
+        """Group by a given field.
 
         Initialize an aggregation pipeline in the collections given by
         `collections_subset` (the default `None` meaning all available
@@ -562,7 +567,7 @@ class CollectionsAccessor:
         silence_warning: bool = False,
         **aggregate_kwargs,
     ) -> MongoGroupBy:
-        """Group by a given field and return aggregate results.
+        """Group by a given field.
 
         Initialize an aggregation pipeline in the collections given by
         `collections_subset` (the default `None` meaning all available
@@ -653,11 +658,32 @@ class MongoGroupBy:
 
     def agg(self, **aggregations) -> Result:
         """
-        Works on the model of named aggregations of
-        :py:meth:`pandas.core.groupby.DataFrameGroupBy.aggregate`, except we
-        provide a :py:meth:`querier.NamedAgg` with keywords `field` and
-        `aggfunc`. For reference see
-        https://pandas.pydata.org/pandas-docs/stable/user_guide/groupby.html?highlight=filter#named-aggregation
+        Perform an aggregation over the grouped-by-field.
+
+        Parameters:
+            **aggregations:
+                Works on the model of named aggregations of
+                :py:meth:`pandas.core.groupby.DataFrameGroupBy.aggregate`, except we
+                provide a :py:meth:`querier.NamedAgg` with keywords `field` and
+                `aggfunc`. For reference see `pandas' user guide`_.
+
+        Returns:
+            Result over which to iterate to obtain the output of the aggregation.
+
+        Examples:
+            Count the number of tweets by place in "collection" of database
+            "twitter_2020"::
+
+                from querier import Connection, NamedAgg
+
+                with Connection("twitter_2020") as con:
+                    con["collection"].groupby("place.id", allowDiskUse=True).agg(
+                        name=NamedAgg(field="place.name", aggfunc="first"),
+                        nr_tweets=NamedAgg(field="id", aggfunc="count"),
+                    )
+
+        .. _pandas' user guide:
+            https://pandas.pydata.org/pandas-docs/stable/user_guide/groupby.html?highlight=filter#named-aggregation
         """
         group_stage = [stage for stage in self.pipeline if "$group" in stage][0]
 
