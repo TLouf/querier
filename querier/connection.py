@@ -277,7 +277,12 @@ class Connection:
             **aggregate_kwargs,
         )
 
-    def distinct(self, field_name: str, collections_subset: list | None = None) -> set:
+    def distinct(
+        self,
+        field_name: str,
+        collections_subset: list | None = None,
+        filter: Filter | None = None,
+    ) -> set:
         """Return a set with all the possible values that the field can take.
 
         Parameters:
@@ -295,7 +300,7 @@ class Connection:
             >>>     con.distinct('place.country')
             {'Spain', 'France', 'Portugal', 'Germany', ...}
         """
-        return self[collections_subset].distinct(field_name)
+        return self[collections_subset].distinct(field_name, filter=filter)
 
     def _test_connection(self) -> bool:
         base_message = "Error accessing the database '" + self._dbname + "'."
@@ -595,10 +600,7 @@ class CollectionsAccessor:
             self, pipeline, silence_warning=silence_warning, **aggregate_kwargs
         )
 
-    def distinct(
-        self,
-        field_name: str,
-    ) -> set:
+    def distinct(self, field_name: str, filter: Filter | None = None) -> set:
         """Return a set with all the possible values that the field can take.
 
         Parameters:
@@ -613,20 +615,22 @@ class CollectionsAccessor:
             >>>     con.distinct('place.country')
             {'Spain', 'France', 'Portugal', 'Germany', ...}
         """
+        query = {} if filter is None else filter.get_query()
         module_logger.debug(
             "######### Begin distinct('{}') #########".format(field_name)
         )
         module_logger.debug(
             "dbname '{}' | process pid {}".format(self.connection._dbname, getpid())
         )
+        module_logger.debug(query)
 
         @_pymongo_call
-        def internal_distinct(coll, field_name):
-            return coll.distinct(field_name)
+        def internal_distinct(coll, field_name, query):
+            return coll.distinct(field_name, filter=query)
 
         result: set[Any] = set()
         for coll in self.collections:
-            d = internal_distinct(coll, field_name)
+            d = internal_distinct(coll, field_name, query)
             if d is not None:
                 module_logger.debug("Executed distinct in " + coll.name)
                 result = result.union(set(d))
