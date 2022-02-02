@@ -392,7 +392,7 @@ class Filter(dict):
             res[op].append(other)
         else:
             conditions = [self.copy(), other]
-            res = Filter({op: [conditions]})
+            res = Filter({op: conditions})
         return res
 
     def _add_operation(self, field_id, operation, value, invert=False):
