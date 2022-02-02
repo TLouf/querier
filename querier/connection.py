@@ -135,7 +135,7 @@ class Connection:
         Extraction methods can be sped up by using a subset of collections.
 
         Returns:
-            A list of all the available collection names
+            A list of all the available collection names.
         """
         names = self._db.list_collection_names()
         for n in names:
@@ -234,8 +234,7 @@ class Connection:
         To iterate through the entries, see :py:class:`querier.Result`.
 
         Parameters:
-            pipeline:
-                List of `aggregation pipeline stages`_.
+            pipeline: List of `aggregation pipeline stages`_.
             collections_subset:
                 List of collections to extract from. A subset of
                 :py:meth:`Connection.list_available_collections()` or `None` (all
@@ -269,6 +268,21 @@ class Connection:
         the field `field_name`, and then filter according to a `post_filter`.
         The aggregations done in the groupby stage are specified by a subsequent
         call to :py:meth:`MongoGroupBy.agg`.
+
+        Parameters:
+            field_name: Name of the field by which to group.
+            collection: Name of the collection to perform the aggregation from.
+            pre_filter: Filter to apply before the aggregation.
+            pre_filter: Filter to apply after the aggregation.
+            silence_warning:
+                If True, silence the warning about doing an aggregation on multiple
+                collections.
+            **aggregate_kwargs:
+                additional keyword arguments to pass on to
+                :py:meth:`pymongo.collection.Collection.aggregate`.
+
+        Returns:
+            A MongoGroupBy instance enabling aggregation by `field_name`.
         """
         return self[collection].groupby(
             field_name,
@@ -280,13 +294,14 @@ class Connection:
     def distinct(
         self,
         field_name: str,
-        collections_subset: list | None = None,
         filter: Filter | None = None,
+        collections_subset: list | None = None,
     ) -> set:
         """Return a set with all the possible values that the field can take.
 
         Parameters:
             field_name: The name of the field to test.
+            filter: Filter to test the entries.
             collections_subset: List of collections to extract from. A subset of
                 :py:meth:`Connection.list_available_collections()` or `None`
                 (all collections).
@@ -528,10 +543,10 @@ class CollectionsAccessor:
         To iterate through the entries, see :py:class:`querier.Result`
 
         Parameters:
-            pipeline: filter to test the entries
+            pipeline: List of `aggregation pipeline stages`_.
             **aggregate_kwargs:
                 additional keyword arguments to pass on to
-                :py:meth:`pymongo.collection.Collection.aggregate`
+                :py:meth:`pymongo.collection.Collection.aggregate`.
 
         Returns:
             Result enabling to iterate through the matching entries in the
@@ -580,6 +595,20 @@ class CollectionsAccessor:
         the field `field_name`, and then filter according to a `post_filter`.
         The aggregations done in the groupby stage are specified by a subsequent
         call to :py:meth:`MongoGroupBy.agg`.
+
+        Parameters:
+            field_name: Name of the field by which to group.
+            pre_filter: Filter to apply before the aggregation.
+            pre_filter: Filter to apply after the aggregation.
+            silence_warning:
+                If True, silence the warning about doing an aggregation on multiple
+                collections.
+            **aggregate_kwargs:
+                additional keyword arguments to pass on to
+                :py:meth:`pymongo.collection.Collection.aggregate`.
+
+        Returns:
+            A MongoGroupBy instance enabling aggregation by `field_name`.
         """
         if aggregate_kwargs is None:
             aggregate_kwargs = {}
@@ -605,6 +634,7 @@ class CollectionsAccessor:
 
         Parameters:
             field_name: The name of the field to test.
+            filter: Filter to test the entries.
 
         Returns:
             Set of distinct values.
@@ -639,6 +669,8 @@ class CollectionsAccessor:
 
 
 class MongoGroupBy:
+    """Enables aggregation by a pre-determined field."""
+
     def __init__(
         self,
         collections_accessor: CollectionsAccessor,
