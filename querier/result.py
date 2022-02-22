@@ -12,7 +12,7 @@ UNAUTHORIZED_COMMAND = 13
 class Result:
     """Multi value result returned by the :py:class:`querier.Connection` class.
 
-    To iterate through the entries a use a python for-loop::
+    To iterate through the entries, use a python for-loop::
 
         import querier as qr
 
@@ -118,7 +118,7 @@ class Result:
                 return self.__next__()
 
     def close(self):
-        """Closes the result
+        """Closes the result.
 
         The result becomes invalid and won't return any entries when
         iterated.
