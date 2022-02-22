@@ -14,7 +14,9 @@ class Result:
 
     To iterate through the entries a use a python for-loop::
 
-        with querier.Connection(database_name, credentials_file) as con:
+        import querier as qr
+
+        with qr.Connection(database_name, credentials_file) as con:
             result = con.extract(f)
             for entry in result:
                 # Process entry (type: dict)
@@ -22,17 +24,14 @@ class Result:
     .. warning:: If the Connection object used to extract the Result is closed, the
         result object becomes invalid and will return 0 entries::
 
-            import querier
+            import querier as qr
 
-            with querier.Connection(database_name, credentials_file) as con:
+            with qr.Connection(database_name, credentials_file) as con:
                 result = con.extract(f)
 
             for entry in result:
-                # Execution will never enter this loop because the Connection objet was
+                # Execution will never enter this loop because the Connection object was
                 # closed by the 'with' keyword
-
-
-
     """
 
     def __init__(self):
@@ -71,7 +70,7 @@ class Result:
              This snippet will iterate between 0 and 100 entries (depending how many
              entries matched the filter)::
 
-                f = Filter()
+                f = qr.Filter()
 
                 # Limits the extraction result to 100 entries
                 result = con.extract(f).limit(100)
@@ -87,7 +86,7 @@ class Result:
         # cursors available
         reached_limit = self._docs_returned >= self._limit and self._limit > 0
         if self._idx >= len(self._cursors) or reached_limit:
-            module_logger.debug("Result finsished")
+            module_logger.debug("Result finished")
             raise StopIteration
 
         # Try to get next document from the current cursor.

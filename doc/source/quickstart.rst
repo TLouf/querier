@@ -7,7 +7,7 @@ Installation
 It is advised to install Querier in a conda environment (other than the base environment).
 To do so, a conda environment with python 3 must be activated
 
-To install the package from the source repository, execute the 
+To install the package from the source repository, execute the
 following command:
 
 .. code:: bash
@@ -17,7 +17,7 @@ following command:
 
 To test that the library is installed, execute the following python script::
 
-    import querier
+    import querier as qr
 
 
 
@@ -28,7 +28,7 @@ A credentials file is required to access any database (next to the database name
 your username and password (among other required parameters).
 
 A credentials file is a config file (`CFG file format <https://en.wikipedia.org/wiki/Configuration_file>`_) used by Querier to
-access the databases. It contains two types of sections: sources, which defines where the data should be retrieved from and 
+access the databases. It contains two types of sections: sources, which defines where the data should be retrieved from and
 specific databases.
 
 An example of a credentials file is shown below:
@@ -45,7 +45,7 @@ An example of a credentials file is shown below:
     ruser=<twitter_username>
     rpwd=<twitter_password>
 
-In this example, the source is MongoDB server (section [mongodb]) and the specific database is [twitter]. Notice that 
+In this example, the source is MongoDB server (section [mongodb]) and the specific database is [twitter]. Notice that
 the [twitter] section is a [mongodb] database (defined by the field 'type').
 
 For example, we could append another specific database for the same source:
@@ -61,7 +61,7 @@ For example, we could append another specific database for the same source:
 .. note::
     The default location of the credentials file is your home directory (~/.credentials.cfg).
     If the file's name starts with a point ('.') character it becomes hidden to file
-    explorers (option '-a' of ls lists hidden files in a directory) 
+    explorers (option '-a' of ls lists hidden files in a directory)
 
 
 .. note::
@@ -76,15 +76,15 @@ For example, we could append another specific database for the same source:
     When using any extraction method from :py:class:`querier.Connection`
 
 
-* If the file is missing or it's format is incorrect, a :py:class:`querier.CredentialsError` will be raised. 
+* If the file is missing or it's format is incorrect, a :py:class:`querier.CredentialsError` will be raised.
 * If the credentials in the file are incorrect or not authorized to read a database, a :py:class:`querier.AuthentificationError` will be raised instead.
 
 For more details, see :py:class:`querier.Connection`.
 
 Connect to a MongoDB database
 -----------------------------
-A :py:class:`querier.Connection` object is required to retrieve data from 
-a database. To create it, a credentials file and a database name are required. 
+A :py:class:`querier.Connection` object is required to retrieve data from
+a database. To create it, a credentials file and a database name are required.
 The list of databases you are allowed to access will be provided by the database administrator.
 
 To start a new connection there are two ways:
@@ -92,31 +92,31 @@ To start a new connection there are two ways:
     * :py:class:`querier.Connection` supports the python's 'with' keyword. It
       should be prioritized as it will close the connection automatically::
 
-        import querier
-        with querier.Connection('twitter_2020') as con:
+        import querier as qr
+        with qr.Connection('twitter_2020') as con:
             # Use con
 
     * It can be instantiated and then closed manually using :py:meth:`querier.Connection.close()`::
 
-        import querier
-        con = querier.Connection('twitter_2020')
+        import querier as qr
+        con = qr.Connection('twitter_2020')
         # Use con
         con.close()
 
-Both examples create an object called **con** of type :py:class:`querier.Connection`, use it to extract data 
-and then close it. 
+Both examples create an object called **con** of type :py:class:`querier.Connection`, use it to extract data
+and then close it.
 
 The constructor starts a process to connect to the database .
 This process can be resolved instantaneously or, at most, in 30 seconds.
 If the connection process was successful the Connection object can be used to extract data from the database.
-Otherwise an appropiate exception will be raised. (see :doc:`errors`)
+Otherwise an appropriate exception will be raised. (see :doc:`errors`)
 
 
 Database format
 ---------------
 
 The entries in a MongoDB database are stored in a similar format to python dictionaries.
-Each entry is a collection of fields with an associated value 
+Each entry is a collection of fields with an associated value
 (which can be a simple or composed type or even another dictionary). Example of an entry
 from the twitter database::
 
@@ -138,7 +138,7 @@ from the twitter database::
            'name': 'Chile',
            'place_type': 'country',
            'url': 'https://api.twitter.com/1.1/geo/id/47a3cf27863714de.json'},
-        
+
         . . .
     }
 
@@ -159,7 +159,7 @@ a it's name::
     }
 
 
-The different operations to extract entries from the database are documented and explained in 
+The different operations to extract entries from the database are documented and explained in
 :py:class:`querier.Connection`
 
 
@@ -167,12 +167,12 @@ Creating a filter
 -----------------
 
 To retrieve data from a database a :py:class:`querier.Filter` is required. They are used
-to retrieve entries with special conditions. 
+to retrieve entries with special conditions.
 
 The most simple filter is the empty filter::
 
-    from querier import Filter
-    f = Filter()
+    import querier as qr
+    f = qr.Filter()
 
 It will make :py:meth:`querier.Connection.extract` method to return all entries in the database as no condition is defined in the filter.
 
@@ -181,18 +181,18 @@ conditions that test a particular field from the database.
 
 Example of a filter::
 
-    from querier import Filter
-    f = Filter()
+    import querier as qr
+    f = qr.Filter()
     f.greater_than('retweet_count', 500)
     f.less_than('retweet_count', 1000)
     f.any_of('place.country_code', ['ES', 'FR'])
 
-This filter will only allow tweets (entries) from Spain or France with a number 
+This filter will only allow tweets (entries) from Spain or France with a number
 of retweets between 500 and 1000.
 
 
-.. note:: 
-    To identify nested fields, the dot notation ('.') can be used. In the previous 
+.. note::
+    To identify nested fields, the dot notation ('.') can be used. In the previous
     example a condition is added to the field 'place.country_code'. It refers to the
     field *country_code* which is subfield from the field named *place*.
 

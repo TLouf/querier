@@ -81,9 +81,9 @@ class Connection:
     Examples:
         The following snippet shows the most simple way to create a Connection::
 
-            from querier import Connection
+            import querier as qr
 
-            with Connection(dbname) as con:
+            with qr.Connection(dbname) as con:
                 # Use con
 
         where dbname is the name of a database.
@@ -163,10 +163,10 @@ class Connection:
             Count how many tweets from Spain in 2014 have more than 500
             favorites:
 
-            >>> from querier import *
-            >>> f = Filter()
+            >>> import querier as qr
+            >>> f = qr.Filter()
             >>> f.greater_than('favorite_count', 500)
-            >>> with Connection('twitter_2014') as con:
+            >>> with qr.Connection('twitter_2014') as con:
             >>>     count = con.count_entries(f, collection='spain')
             3
         """
@@ -310,8 +310,8 @@ class Connection:
             Set of distinct values.
 
         Examples:
-            >>> import querier
-            >>> with querier.Connection('twitter_2020') as con:
+            >>> import querier as qr
+            >>> with qr.Connection('twitter_2020') as con:
             >>>     con.distinct('place.country')
             {'Spain', 'France', 'Portugal', 'Germany', ...}
         """
@@ -383,10 +383,10 @@ class CollectionsAccessor:
         To extract a single document from the collections `colls` of the database
         `dbname`::
 
-            from querier import Connection
+            import querier as qr
 
             colls = ["collection A", "collection B"]
-            with Connection(dbname) as con:
+            with qr.Connection(dbname) as con:
                 result = con[colls].extract_one()
     """
 
@@ -420,11 +420,11 @@ class CollectionsAccessor:
             Count how many tweets from Spain in 2014 have more than 500
             favorites:
 
-            >>> from querier import *
-            >>> f = Filter()
+            >>> import querier as qr
+            >>> f = qr.Filter()
             >>> f.greater_than('favorite_count', 500)
-            >>> with Connection('twitter_2014') as con:
-            >>>     count = con.count_entries(f, collection='spain')
+            >>> with qr.Connection('twitter_2014') as con:
+            >>>     count = con['spain'].count_entries(f)
             3
         """
         query = {} if filter is None else filter.get_query()
@@ -640,8 +640,8 @@ class CollectionsAccessor:
             Set of distinct values.
 
         Examples:
-            >>> import querier
-            >>> with querier.Connection('twitter_2020') as con:
+            >>> import querier as qr
+            >>> with qr.Connection('twitter_2020') as con:
             >>>     con.distinct('place.country')
             {'Spain', 'France', 'Portugal', 'Germany', ...}
         """
@@ -710,12 +710,12 @@ class MongoGroupBy:
             Count the number of tweets by place in "collection" of database
             "twitter_2020"::
 
-                from querier import Connection, NamedAgg
+                import querier as qr
 
-                with Connection("twitter_2020") as con:
+                with qr.Connection("twitter_2020") as con:
                     con["collection"].groupby("place.id", allowDiskUse=True).agg(
-                        name=NamedAgg(field="place.name", aggfunc="first"),
-                        nr_tweets=NamedAgg(field="id", aggfunc="count"),
+                        name=qr.NamedAgg(field="place.name", aggfunc="first"),
+                        nr_tweets=qr.NamedAgg(field="id", aggfunc="count"),
                     )
 
         .. _pandas' user guide:

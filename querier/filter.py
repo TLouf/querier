@@ -24,8 +24,8 @@ class Filter(dict):
 
     For example, the following code::
 
-        from querier import Filter
-        f = Filter()
+        import querier as qr
+        f = qr.Filter()
         f.greater_than('x', 0)
         f.less_or_equals('x', 100)
 
@@ -326,12 +326,12 @@ class Filter(dict):
             Create a Filter f1 that matches tweets with a number of retweets
             larger than 1000 OR a number of favorites larger than 500::
 
-                import querier
+                import querier as qr
 
-                f1 = querier.Filter()
+                f1 = qr.Filter()
                 f1.greater_or_equals('retweet_count', 1000)
 
-                f2 = querier.Filter()
+                f2 = qr.Filter()
                 f2.greater_or_equals('favorite_count', 500)
 
                 f1.or_filter(f2)
@@ -361,12 +361,12 @@ class Filter(dict):
             Create a Filter f1 that matches tweets with a number of retweets between
             500 and 1000::
 
-                import querier
+                import querier as qr
 
-                f1 = querier.Filter()
+                f1 = qr.Filter()
                 f1.greater_or_equals('retweet_count', 500)
 
-                f2 = querier.Filter()
+                f2 = qr.Filter()
                 f2.less_or_equals('retweet_count', 1000)
 
                 f1.and_filter(f2)
