@@ -108,6 +108,7 @@ Twitter databases are split by year and named ``twitter_{year}`` requiring more 
 Connection object to extract tweets from different years.
 
 
+
 Group by a field and aggregate
 ------------------------------
 
@@ -146,3 +147,35 @@ which also works.
 
 .. _pandas' user guide:
     https://pandas.pydata.org/pandas-docs/stable/user_guide/groupby.html?#named-aggregation
+
+
+
+Geographic filters
+--------------------------
+
+If you want to select tweets with coordinates within a given place, let's say New York
+City::
+
+    import querier as qr
+    import geopandas as gpd
+
+    # Note the conversion to 'epsg:4326', the default (longitude, latitude) coordinate
+    # reference system.
+    nyc_boroughs = gpd.read_file(gpd.datasets.get_path('nybb')).to_crs('epsg:4326')
+    f = qr.Filter()
+
+here are several equivalent ways to generate the corresponding filter, first using the
+full polygon::
+
+    f.geo_within('coordinates', nyc_boroughs.unary_union)
+
+which may prove rather costly given the complexity of the input polygon. To now generate
+a rougher but simpler filter using NYC's bounding box::
+
+    f.geo_within('coordinates', nyc_boroughs.total_bounds, geo_type='bbox')
+
+or equivalently::
+
+    from shapely.geometry import box
+
+    f.geo_within('coordinates', box(*nyc_boroughs.total_bounds))
