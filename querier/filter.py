@@ -304,6 +304,7 @@ class Filter(dict):
 
         value = {"$geometry": geo_dict}
         self._add_operation(field_id, op, value, invert=invert)
+        return self
 
     def is_empty(self) -> bool:
         """Return True if the filter is empty (has no conditions), False otherwise."""
