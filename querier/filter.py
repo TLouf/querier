@@ -4,6 +4,8 @@ from __future__ import annotations
 from pprint import pformat
 from typing import TYPE_CHECKING, Mapping, Union
 
+import bson
+
 from querier.exceptions import InvalidFilter
 
 if TYPE_CHECKING:
@@ -183,13 +185,17 @@ class Filter(dict):
         self._add_operation(field_id, "$lte", value)
         return self
 
-    def regex(self, field_id: str, pattern: str | re.Pattern) -> Filter:
+    def regex(
+        self, field_id: str, pattern: str | re.Pattern | bson.regex.Regex
+    ) -> Filter:
         """
         Add a condition to the filter that matches when the field matches the regular
         expression `pattern`.
 
         **python equivalent:** ``pattern.match(field_id) is not None``
         """
+        if isinstance(pattern, str):
+            pattern = bson.regex.Regex(pattern)
         self._add_operation(field_id, "$regex", pattern)
         return self
 
