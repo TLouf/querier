@@ -273,7 +273,7 @@ class Connection:
             field_name: Name of the field by which to group.
             collection: Name of the collection to perform the aggregation from.
             pre_filter: Filter to apply before the aggregation.
-            pre_filter: Filter to apply after the aggregation.
+            post_filter: Filter to apply after the aggregation.
             silence_warning:
                 If True, silence the warning about doing an aggregation on multiple
                 collections.
@@ -599,7 +599,7 @@ class CollectionsAccessor:
         Parameters:
             field_name: Name of the field by which to group.
             pre_filter: Filter to apply before the aggregation.
-            pre_filter: Filter to apply after the aggregation.
+            post_filter: Filter to apply after the aggregation.
             silence_warning:
                 If True, silence the warning about doing an aggregation on multiple
                 collections.
