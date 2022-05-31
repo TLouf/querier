@@ -1,5 +1,5 @@
 import logging
-import logging.handlers
+from logging.handlers import RotatingFileHandler
 
 from querier.connection import CollectionsAccessor, Connection, MongoGroupBy, NamedAgg
 from querier.exceptions import (
@@ -35,7 +35,7 @@ def init_logger(name, filename, level=logging.DEBUG):
     file_formatter = logging.Formatter("[%(levelname)s] <%(asctime)s>: %(message)s")
 
     max_size = 256 * 1024
-    fh = logging.handlers.RotatingFileHandler(filename, maxBytes=max_size)
+    fh = RotatingFileHandler(filename, backupCount=1, maxBytes=max_size)
     fh.setFormatter(file_formatter)
 
     logger.addHandler(fh)
