@@ -254,7 +254,7 @@ class Connection:
 
     def groupby(
         self,
-        field_name: str,
+        field_name: str | list(str),
         collection: str,
         pre_filter: Filter | None = None,
         post_filter: Filter | None = None,
@@ -270,7 +270,7 @@ class Connection:
         call to :py:meth:`MongoGroupBy.agg`.
 
         Parameters:
-            field_name: Name of the field by which to group.
+            field_name: Name or list of names of the field(s) by which to group.
             collection: Name of the collection to perform the aggregation from.
             pre_filter: Filter to apply before the aggregation.
             post_filter: Filter to apply after the aggregation.
@@ -581,7 +581,7 @@ class CollectionsAccessor:
 
     def groupby(
         self,
-        field_name: str,
+        field_name: str | list(str),
         pre_filter: Filter | None = None,
         post_filter: Filter | None = None,
         silence_warning: bool = False,
@@ -592,12 +592,12 @@ class CollectionsAccessor:
         Initialize an aggregation pipeline in the collections given by
         `collections_subset` (the default `None` meaning all available
         collections), in which we filter according to a `pre_filter`, group by
-        the field `field_name`, and then filter according to a `post_filter`.
+        the field(s) `field_name`, and then filter according to a `post_filter`.
         The aggregations done in the groupby stage are specified by a subsequent
         call to :py:meth:`MongoGroupBy.agg`.
 
         Parameters:
-            field_name: Name of the field by which to group.
+            field_name: Name or list of names of the field(s) by which to group.
             pre_filter: Filter to apply before the aggregation.
             post_filter: Filter to apply after the aggregation.
             silence_warning:
@@ -613,13 +613,14 @@ class CollectionsAccessor:
         if aggregate_kwargs is None:
             aggregate_kwargs = {}
 
+        if isinstance(field_name, str):
+            field_name = [field_name]
+
         pipeline: list[dict[str, Filter | dict]] = []
         if pre_filter is not None:
             pipeline.append({"$match": pre_filter})
 
-        if not field_name.startswith("$"):
-            field_name = "$" + field_name
-        group_stage = {"_id": field_name}
+        group_stage = {"_id": {fn: "$" + fn.removeprefix("$") for fn in field_name}}
         pipeline.append({"$group": group_stage})
 
         if post_filter is not None:
