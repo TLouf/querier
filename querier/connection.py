@@ -727,17 +727,13 @@ class MongoGroupBy:
         for output_field, agg_descr in aggregations.items():
             if not hasattr(agg_descr, "aggfunc"):
                 agg_descr = NamedAgg(*agg_descr)
-            aggfunc = agg_descr.aggfunc
-            if not aggfunc.startswith("$"):
-                aggfunc = "$" + aggfunc
+            aggfunc = "$" + agg_descr.aggfunc.removeprefix("$")
 
             if aggfunc == "$count":
                 aggfunc = "$sum"
                 input_field = 1
             else:
-                input_field = agg_descr.field
-                if not input_field.startswith("$"):
-                    input_field = "$" + input_field
+                input_field = "$" + agg_descr.field.removeprefix("$")
 
             group_stage["$group"][output_field] = {aggfunc: input_field}
 
