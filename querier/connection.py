@@ -270,7 +270,10 @@ class Connection:
         call to :py:meth:`MongoGroupBy.agg`.
 
         Parameters:
-            field_name: Name or list of names of the field(s) by which to group.
+            field_name:
+                Name or list of names of the field(s) by which to group. Note that
+                nested fields using the dot notation will appear in the output with
+                dots ('.') replaced by underscores ('_').
             collection: Name of the collection to perform the aggregation from.
             pre_filter: Filter to apply before the aggregation.
             post_filter: Filter to apply after the aggregation.
@@ -597,7 +600,10 @@ class CollectionsAccessor:
         call to :py:meth:`MongoGroupBy.agg`.
 
         Parameters:
-            field_name: Name or list of names of the field(s) by which to group.
+            field_name:
+                Name or list of names of the field(s) by which to group. Note that
+                nested fields using the dot notation will appear in the output with
+                dots ('.') replaced by underscores ('_').
             pre_filter: Filter to apply before the aggregation.
             post_filter: Filter to apply after the aggregation.
             silence_warning:
@@ -620,7 +626,13 @@ class CollectionsAccessor:
         if pre_filter is not None:
             pipeline.append({"$match": pre_filter})
 
-        group_stage = {"_id": {fn: "$" + fn.removeprefix("$") for fn in field_name}}
+        group_stage = {"_id": {}}
+        for fn in field_name:
+            without_prefix = fn.removeprefix("$")
+            # Output field names may not contain dots or an error gets thrown.
+            output_fn = without_prefix.replace(".", "_")
+            group_stage["_id"][output_fn] = "$" + without_prefix
+
         pipeline.append({"$group": group_stage})
 
         if post_filter is not None:
