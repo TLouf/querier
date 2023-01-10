@@ -4,18 +4,14 @@ Quickstart
 Installation
 ------------
 
-It is advised to install Querier in a conda environment (other than the base environment).
-To do so, a conda environment with python 3 must be activated
-
-To install the package from the source repository, execute the
-following command:
+To install the package from the source repository, execute the following command:
 
 .. code:: bash
 
     pip install git+https://github.com/TLouf/querier.git#egg=querier
 
 
-To test that the library is installed, execute the following python script::
+You can then import the module to check it was properly installed::
 
     import querier as qr
 
@@ -76,7 +72,7 @@ For example, we could append another specific database for the same source:
     When using any extraction method from :py:class:`querier.Connection`
 
 
-* If the file is missing or it's format is incorrect, a :py:class:`querier.CredentialsError` will be raised.
+* If the file is missing or its format is incorrect, a :py:class:`querier.CredentialsError` will be raised.
 * If the credentials in the file are incorrect or not authorized to read a database, a :py:class:`querier.AuthentificationError` will be raised instead.
 
 For more details, see :py:class:`querier.Connection`.
@@ -112,13 +108,32 @@ If the connection process was successful the Connection object can be used to ex
 Otherwise an appropriate exception will be raised. (see :doc:`errors`)
 
 
+Extract from a collection
+-------------------------
+Each database may contain several collections. To extract data from a specific
+collection, you can select it with square brackets::
+
+    with qr.Connection('twitter_2020') as con:
+        result = con['collection_name'].extract(...)
+
+which calls the :py:meth:`querier.CollectionsAccessor.extract()` method, equivalent to
+providing `collections_subset='collection_name'` to the
+:py:meth:`querier.Connection.extract()` method.
+
+To know what collections are available in the database, you can use the
+:py:meth:`querier.Connection.list_available_collections()` method::
+
+    with qr.Connection('twitter_2020') as con:
+        print(con.list_available_collections())
+
+
 Database format
 ---------------
 
 The entries in a MongoDB database are stored in a similar format to python dictionaries.
-Each entry is a collection of fields with an associated value
-(which can be a simple or composed type or even another dictionary). Example of an entry
-from the twitter database::
+Each entry is a collection of fields with an associated value (which can be a simple or
+composed type or even another dictionary). Here's an example of an entry from the
+twitter database::
 
     {
         'created_at': datetime.datetime(2020, 1, 4, 13, 49, 59),
@@ -144,7 +159,7 @@ from the twitter database::
 
 
 Entries are returned by querier as python dictionaries. You can access a field by
-a it's name::
+its name::
 
     >>> tweet['created_at']
     datetime.datetime(2020, 1, 4, 13, 49, 59)

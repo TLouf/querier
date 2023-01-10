@@ -375,7 +375,7 @@ class CollectionsAccessor:
 
     An instance of this class is normally obtained through a :py:class:`Connection`
     instance, selecting with square brackets the collection(s), as one would select
-    columns from a pandas DataFrame for instance.
+    items from a dictionary.
 
     Parameters:
         connection (Connection): Database connection used to retrieve data.
