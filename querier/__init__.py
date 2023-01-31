@@ -35,7 +35,9 @@ def init_logger(name, filename, level=logging.DEBUG):
     file_formatter = logging.Formatter("[%(levelname)s] <%(asctime)s>: %(message)s")
 
     max_size = 256 * 1024
-    fh = RotatingFileHandler(filename, backupCount=1, maxBytes=max_size)
+    fh = RotatingFileHandler(
+        filename, backupCount=1, maxBytes=max_size, encoding="utf-8"
+    )
     fh.setFormatter(file_formatter)
 
     logger.addHandler(fh)
