@@ -8,7 +8,7 @@ To install the package from the source repository, execute the following command
 
 .. code:: bash
 
-    pip install git+https://github.com/TLouf/querier.git#egg=querier
+    pip install git+git+https://gitlab.ifisc.uib-csic.es/socio-physics/querier.git
 
 
 You can then import the module to check it was properly installed::

@@ -1,7 +1,5 @@
 # Querier
 
-[![](https://readthedocs.org/projects/querier/badge/?version=latest)](https://querier.readthedocs.io/en/latest/?version=latest)
-
 Querier is a simple library to extract data from MongoDB databases, wrapping [`pymongo`](pymongo.readthedocs.io/).
 
 This branch contains the first version of the library. Everything is yet untested and subject to changes
@@ -17,7 +15,7 @@ To install the package from the source repository, install git and execute the
 following command::
 
 ```
-    pip install git+https://gitlab.ifisc.uib-csic.es/socio-physics/querier
+    pip install git+https://gitlab.ifisc.uib-csic.es/socio-physics/querier.git
 ```
 
 To test that the library is installed, execute the following python script:

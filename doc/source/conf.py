@@ -126,5 +126,7 @@ def linkcode_resolve(domain, info):
         linespec = ""
 
     fn = os.path.relpath(fn, start=os.path.dirname(querier.__file__))
-
-    return f"https://github.com/TLouf/querier/blob/master/querier/{fn}{linespec}"
+    repo_url = (
+        "https://gitlab.ifisc.uib-csic.es/socio-physics/querier/blob/master/querier"
+    )
+    return f"{repo_url}/{fn}{linespec}"
